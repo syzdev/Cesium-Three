@@ -1,12 +1,4 @@
 declare module "cesium" {
-
-/**
- * Private interfaces to support PropertyBag being a dictionary-like object.
- */
-interface DictionaryLike {
-    [index: string]: any;
-}
-
 /**
  * Enum containing WebGL Constant values by name.
  * for use without an active WebGL context, or in cases where certain constants are unavailable using the WebGL context
@@ -700,9 +692,9 @@ export class ArcGISTiledElevationTerrainProvider {
      * @param x - The X coordinate of the tile for which to request geometry.
      * @param y - The Y coordinate of the tile for which to request geometry.
      * @param level - The level of the tile for which to request geometry.
-     * @returns Undefined if nothing need to be loaded or a Promise that resolves when all required tiles are loaded
+     * @returns This provider does not support loading availability.
      */
-    loadTileDataAvailability(x: number, y: number, level: number): undefined | Promise<void>;
+    loadTileDataAvailability(x: number, y: number, level: number): undefined;
 }
 
 /**
@@ -1103,7 +1095,7 @@ export class BoundingSphere {
     static fromEncodedCartesianVertices(positionsHigh?: number[], positionsLow?: number[], result?: BoundingSphere): BoundingSphere;
     /**
      * Computes a bounding sphere from the corner points of an axis-aligned bounding box.  The sphere
-     * tighly and fully encompases the box.
+     * tightly and fully encompasses the box.
      * @example
      * // Create a bounding sphere around the unit cube
      * const sphere = Cesium.BoundingSphere.fromCornerPoints(new Cesium.Cartesian3(-0.5, -0.5, -0.5), new Cesium.Cartesian3(0.5, 0.5, 0.5));
@@ -2796,6 +2788,11 @@ export class CatmullRomSpline {
 
 /**
  * A {@link TerrainProvider} that accesses terrain data in a Cesium terrain format.
+ * Terrain formats can be one of the following:
+ * <ul>
+ * <li> {@link https://github.com/AnalyticalGraphicsInc/quantized-mesh Quantized Mesh} </li>
+ * <li> {@link https://github.com/AnalyticalGraphicsInc/cesium/wiki/heightmap-1.0 Height Map} </li>
+ * </ul>
  * @example
  * // Create Arctic DEM terrain with normals.
  * const viewer = new Cesium.Viewer('cesiumContainer', {
@@ -4417,6 +4414,51 @@ export class CompressedTextureBuffer {
 }
 
 /**
+ * A spline that evaluates to a constant value. Although this follows the {@link Spline} interface,
+ * it does not maintain an internal array of times since its value never changes.
+ * @example
+ * const position = new Cesium.Cartesian3(1.0, 2.0, 3.0);
+ * const spline = new Cesium.ConstantSpline(position);
+ *
+ * const p0 = spline.evaluate(0.0);
+ * @param value - The constant value that the spline evaluates to.
+ */
+export class ConstantSpline {
+    constructor(value: number | Cartesian3 | Quaternion);
+    /**
+     * The constant value that the spline evaluates to.
+     */
+    readonly value: number | Cartesian3 | Quaternion;
+    /**
+     * Finds an index <code>i</code> in <code>times</code> such that the parameter
+     * <code>time</code> is in the interval <code>[times[i], times[i + 1]]</code>.
+     *
+     * Since a constant spline has no internal times array, this will throw an error.
+     * @param time - The time.
+     */
+    findTimeInterval(time: number): void;
+    /**
+     * Wraps the given time to the period covered by the spline.
+     * @param time - The time.
+     * @returns The time, wrapped around to the updated animation.
+     */
+    wrapTime(time: number): number;
+    /**
+     * Clamps the given time to the period covered by the spline.
+     * @param time - The time.
+     * @returns The time, clamped to the animation period.
+     */
+    clampTime(time: number): number;
+    /**
+     * Evaluates the curve at a given time.
+     * @param time - The time at which to evaluate the curve.
+     * @param [result] - The object onto which to store the result.
+     * @returns The modified result parameter or the value that the constant spline represents.
+     */
+    evaluate(time: number, result?: Cartesian3 | Quaternion): number | Cartesian3 | Quaternion;
+}
+
+/**
  * A description of a polygon composed of arbitrary coplanar positions.
  * @example
  * const polygonGeometry = new Cesium.CoplanarPolygonGeometry({
@@ -4433,6 +4475,7 @@ export class CompressedTextureBuffer {
  * @param [options.stRotation = 0.0] - The rotation of the texture coordinates, in radians. A positive rotation is counter-clockwise.
  * @param [options.vertexFormat = VertexFormat.DEFAULT] - The vertex attributes to be computed.
  * @param [options.ellipsoid = Ellipsoid.WGS84] - The ellipsoid to be used as a reference.
+ * @param [options.textureCoordinates] - Texture coordinates as a {@link PolygonHierarchy} of {@link Cartesian2} points.
  */
 export class CoplanarPolygonGeometry {
     constructor(options: {
@@ -4440,6 +4483,7 @@ export class CoplanarPolygonGeometry {
         stRotation?: number;
         vertexFormat?: VertexFormat;
         ellipsoid?: Ellipsoid;
+        textureCoordinates?: PolygonHierarchy;
     });
     /**
      * The number of elements used to pack the object into an array.
@@ -4464,12 +4508,14 @@ export class CoplanarPolygonGeometry {
      * @param [options.vertexFormat = VertexFormat.DEFAULT] - The vertex attributes to be computed.
      * @param [options.stRotation = 0.0] - The rotation of the texture coordinates, in radians. A positive rotation is counter-clockwise.
      * @param [options.ellipsoid = Ellipsoid.WGS84] - The ellipsoid to be used as a reference.
+     * @param [options.textureCoordinates] - Texture coordinates as a {@link PolygonHierarchy} of {@link Cartesian2} points.
      */
     static fromPositions(options: {
         positions: Cartesian3[];
         vertexFormat?: VertexFormat;
         stRotation?: number;
         ellipsoid?: Ellipsoid;
+        textureCoordinates?: PolygonHierarchy;
     }): CoplanarPolygonGeometry;
     /**
      * Stores the provided instance into the provided array.
@@ -6157,9 +6203,9 @@ export class EllipsoidTerrainProvider {
      * @param x - The X coordinate of the tile for which to request geometry.
      * @param y - The Y coordinate of the tile for which to request geometry.
      * @param level - The level of the tile for which to request geometry.
-     * @returns Undefined if nothing need to be loaded or a Promise that resolves when all required tiles are loaded
+     * @returns This provider does not support loading availability.
      */
-    loadTileDataAvailability(x: number, y: number, level: number): undefined | Promise<void>;
+    loadTileDataAvailability(x: number, y: number, level: number): undefined;
 }
 
 /**
@@ -6178,7 +6224,7 @@ export class EllipsoidTerrainProvider {
  * evt.raiseEvent('1', '2');
  * evt.removeEventListener(MyObject.prototype.myListener);
  */
-export class Event {
+export class Event<Listener extends (...args: any[]) => void = (...args: any[]) => void> {
     constructor();
     /**
      * The number of listeners currently subscribed to the event.
@@ -6193,19 +6239,19 @@ export class Event {
      *        pointer in which the listener function will execute.
      * @returns A function that will remove this event listener when invoked.
      */
-    addEventListener(listener: (...params: any[]) => any, scope?: any): Event.RemoveCallback;
+    addEventListener(listener: Listener, scope?: any): Event.RemoveCallback;
     /**
      * Unregisters a previously registered callback.
      * @param listener - The function to be unregistered.
      * @param [scope] - The scope that was originally passed to addEventListener.
      * @returns <code>true</code> if the listener was removed; <code>false</code> if the listener and scope are not registered with the event.
      */
-    removeEventListener(listener: (...params: any[]) => any, scope?: any): boolean;
+    removeEventListener(listener: Listener, scope?: any): boolean;
     /**
      * Raises the event by calling each registered listener with all supplied arguments.
      * @param arguments - This method takes any number of parameters and passes them through to the listener functions.
      */
-    raiseEvent(...arguments: any[]): void;
+    raiseEvent(...arguments: Parameters<Listener>[]): void;
 }
 
 export namespace Event {
@@ -6267,7 +6313,12 @@ export namespace EventHelper {
  *   <li>To avoid cluttering the code, check the flag in as few places as possible. Ideally this would be a single place.</li>
  * </ul>
  */
-export const ExperimentalFeatures: any;
+export namespace ExperimentalFeatures {
+    /**
+     * Toggles the usage of the ModelExperimental class.
+     */
+    var enableModelExperimental: boolean;
+}
 
 /**
  * Constants to determine how an interpolated value is extrapolated
@@ -7365,7 +7416,7 @@ export class GoogleEarthEnterpriseTerrainData {
 /**
  * Provides tiled terrain using the Google Earth Enterprise REST API.
  * @example
- * const geeMetadata = new GoogleEarthEnterpriseMetadata('http://www.earthenterprise.org/3d');
+ * const geeMetadata = new GoogleEarthEnterpriseMetadata('http://www.example.com');
  * const gee = new Cesium.GoogleEarthEnterpriseTerrainProvider({
  *     metadata : geeMetadata
  * });
@@ -7465,9 +7516,8 @@ export class GoogleEarthEnterpriseTerrainProvider {
      * @param x - The X coordinate of the tile for which to request geometry.
      * @param y - The Y coordinate of the tile for which to request geometry.
      * @param level - The level of the tile for which to request geometry.
-     * @returns Undefined if nothing need to be loaded or a Promise that resolves when all required tiles are loaded
      */
-    loadTileDataAvailability(x: number, y: number, level: number): undefined | Promise<void>;
+    loadTileDataAvailability(x: number, y: number, level: number): undefined;
 }
 
 /**
@@ -7839,8 +7889,7 @@ export class HeightmapTerrainData {
      * @param descendantY - The Y coordinate within the tiling scheme of the descendant tile for which we are upsampling.
      * @param descendantLevel - The level within the tiling scheme of the descendant tile for which we are upsampling.
      * @returns A promise for upsampled heightmap terrain data for the descendant tile,
-     *          or undefined if too many asynchronous upsample operations are in progress and the request has been
-     *          deferred.
+     *          or undefined if the mesh is unavailable.
      */
     upsample(tilingScheme: TilingScheme, thisX: number, thisY: number, thisLevel: number, descendantX: number, descendantY: number, descendantLevel: number): Promise<HeightmapTerrainData> | undefined;
     /**
@@ -7942,9 +7991,9 @@ export namespace HermitePolynomialApproximation {
  * @param options - Object with the following properties:
  * @param options.times - An array of strictly increasing, unit-less, floating-point times at each point.
  *                The values are in no way connected to the clock time. They are the parameterization for the curve.
- * @param options.points - The array of {@link Cartesian3} control points.
- * @param options.inTangents - The array of {@link Cartesian3} incoming tangents at each control point.
- * @param options.outTangents - The array of {@link Cartesian3} outgoing tangents at each control point.
+ * @param options.points - The array of control points.
+ * @param options.inTangents - The array of incoming tangents at each control point.
+ * @param options.outTangents - The array of outgoing tangents at each control point.
  */
 export class HermiteSpline {
     constructor(options: {
@@ -7958,15 +8007,15 @@ export class HermiteSpline {
      */
     readonly times: number[];
     /**
-     * An array of {@link Cartesian3} control points.
+     * An array of control points.
      */
     readonly points: Cartesian3[];
     /**
-     * An array of {@link Cartesian3} incoming tangents at each control point.
+     * An array of incoming tangents at each control point.
      */
     readonly inTangents: Cartesian3[];
     /**
-     * An array of {@link Cartesian3} outgoing tangents at each control point.
+     * An array of outgoing tangents at each control point.
      */
     readonly outTangents: Cartesian3[];
     /**
@@ -8024,7 +8073,7 @@ export class HermiteSpline {
      * @param options - Object with the following properties:
      * @param options.times - The array of control point times.
      * @param options.points - The array of control points.
-     * @returns A hermite spline or a linear spline if less than 3 control points were given.
+     * @returns A hermite spline, or a linear spline if less than 3 control points were given.
      */
     static createNaturalCubic(options: {
         times: number[];
@@ -8052,11 +8101,11 @@ export class HermiteSpline {
      * @param options.points - The array of control points.
      * @param options.firstTangent - The outgoing tangent of the first control point.
      * @param options.lastTangent - The incoming tangent of the last control point.
-     * @returns A hermite spline or a linear spline if less than 3 control points were given.
+     * @returns A hermite spline, or a linear spline if less than 3 control points were given.
      */
     static createClampedCubic(options: {
         times: number[];
-        points: Cartesian3[];
+        points: number[] | Cartesian3[];
         firstTangent: Cartesian3;
         lastTangent: Cartesian3;
     }): HermiteSpline | LinearSpline;
@@ -8499,7 +8548,7 @@ export class IonResource extends Resource {
         preferImageBitmap?: boolean;
         flipY?: boolean;
         skipColorSpaceConversion?: boolean;
-    }): Promise<ImageBitmap> | Promise<HTMLImageElement> | undefined;
+    }): Promise<ImageBitmap | HTMLImageElement> | undefined;
 }
 
 /**
@@ -8520,7 +8569,7 @@ export namespace Iso8601 {
      * A {@link TimeInterval} representing the largest interval representable by an ISO8601 interval.
      * This is equivalent to the interval string '0000-01-01T00:00:00Z/9999-12-31T24:00:00Z'
      */
-    const MAXIMUM_INTERVAL: JulianDate;
+    const MAXIMUM_INTERVAL: TimeInterval;
 }
 
 /**
@@ -8856,12 +8905,12 @@ export namespace LinearApproximation {
  * @param options - Object with the following properties:
  * @param options.times - An array of strictly increasing, unit-less, floating-point times at each point.
  *                The values are in no way connected to the clock time. They are the parameterization for the curve.
- * @param options.points - The array of {@link Cartesian3} control points.
+ * @param options.points - The array of control points.
  */
 export class LinearSpline {
     constructor(options: {
         times: number[];
-        points: Cartesian3[];
+        points: number[] | Cartesian3[];
     });
     /**
      * An array of times for the control points.
@@ -8870,7 +8919,7 @@ export class LinearSpline {
     /**
      * An array of {@link Cartesian3} control points.
      */
-    readonly points: Cartesian3[];
+    readonly points: number[] | Cartesian3[];
     /**
      * Finds an index <code>i</code> in <code>times</code> such that the parameter
      * <code>time</code> is in the interval <code>[times[i], times[i + 1]]</code>.
@@ -8896,7 +8945,7 @@ export class LinearSpline {
      * @param [result] - The object onto which to store the result.
      * @returns The modified result parameter or a new instance of the point on the curve at the given time.
      */
-    evaluate(time: number, result?: Cartesian3): Cartesian3;
+    evaluate(time: number, result?: Cartesian3): number | Cartesian3;
 }
 
 /**
@@ -9497,8 +9546,12 @@ export class Matrix2 implements ArrayLike<number> {
      * // Create same Matrix2 with using an offset into an array
      * const v2 = [0.0, 0.0, 1.0, 1.0, 2.0, 2.0];
      * const m2 = Cesium.Matrix2.fromArray(v2, 2);
+     * @param array - The array whose 4 consecutive elements correspond to the positions of the matrix.  Assumes column-major order.
+     * @param [startingIndex = 0] - The offset into the array of the first element, which corresponds to first column first row position in the matrix.
+     * @param [result] - The object onto which to store the result.
+     * @returns The modified result parameter or a new Matrix2 instance if one was not provided.
      */
-    static fromArray: any;
+    static fromArray(array: number[], startingIndex?: number, result?: Matrix2): Matrix2;
     /**
      * Creates a Matrix2 instance from a column-major order array.
      * @param values - The column-major order array.
@@ -9895,8 +9948,12 @@ export class Matrix3 implements ArrayLike<number> {
      * // Create same Matrix3 with using an offset into an array
      * const v2 = [0.0, 0.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0];
      * const m2 = Cesium.Matrix3.fromArray(v2, 2);
+     * @param array - The array whose 9 consecutive elements correspond to the positions of the matrix.  Assumes column-major order.
+     * @param [startingIndex = 0] - The offset into the array of the first element, which corresponds to first column first row position in the matrix.
+     * @param [result] - The object onto which to store the result.
+     * @returns The modified result parameter or a new Matrix3 instance if one was not provided.
      */
-    static fromArray: any;
+    static fromArray(array: number[], startingIndex?: number, result?: Matrix3): Matrix3;
     /**
      * Creates a Matrix3 instance from a column-major order array.
      * @param values - The column-major order array.
@@ -11184,6 +11241,58 @@ export class Matrix4 implements ArrayLike<number> {
      * @returns A string representing the provided Matrix with each row being on a separate line and in the format '(column0, column1, column2, column3)'.
      */
     toString(): string;
+}
+
+/**
+ * A spline that linearly interpolates over an array of weight values used by morph targets.
+ * @example
+ * const times = [ 0.0, 1.5, 3.0, 4.5, 6.0 ];
+ * const weights = [0.0, 1.0, 0.25, 0.75, 0.5, 0.5, 0.75, 0.25, 1.0, 0.0]; //Two targets
+ * const spline = new Cesium.WeightSpline({
+ *     times : times,
+ *     weights : weights
+ * });
+ *
+ * const p0 = spline.evaluate(times[0]);
+ * @param options - Object with the following properties:
+ * @param options.times - An array of strictly increasing, unit-less, floating-point times at each point.
+ *                The values are in no way connected to the clock time. They are the parameterization for the curve.
+ * @param options.weights - The array of floating-point control weights given. The weights are ordered such
+ *                that all weights for the targets are given in chronological order and order in which they appear in
+ *                the glTF from which the morph targets come. This means for 2 targets, weights = [w(0,0), w(0,1), w(1,0), w(1,1) ...]
+ *                where i and j in w(i,j) are the time indices and target indices, respectively.
+ */
+export class MorphWeightSpline {
+    constructor(options: {
+        times: number[];
+        weights: number[];
+    });
+    /**
+     * Finds an index <code>i</code> in <code>times</code> such that the parameter
+     * <code>time</code> is in the interval <code>[times[i], times[i + 1]]</code>.
+     * @param time - The time.
+     * @returns The index for the element at the start of the interval.
+     */
+    findTimeInterval(time: number): number;
+    /**
+     * Wraps the given time to the period covered by the spline.
+     * @param time - The time.
+     * @returns The time, wrapped around to the updated animation.
+     */
+    wrapTime(time: number): number;
+    /**
+     * Clamps the given time to the period covered by the spline.
+     * @param time - The time.
+     * @returns The time, clamped to the animation period.
+     */
+    clampTime(time: number): number;
+    /**
+     * Evaluates the curve at a given time.
+     * @param time - The time at which to evaluate the curve.
+     * @param [result] - The object onto which to store the result.
+     * @returns The modified result parameter or a new instance of the point on the curve at the given time.
+     */
+    evaluate(time: number, result?: number[]): number[];
 }
 
 /**
@@ -12590,6 +12699,7 @@ export class PlaneOutlineGeometry {
  * @param [options.closeTop = true] - When false, leaves off the top of an extruded polygon open.
  * @param [options.closeBottom = true] - When false, leaves off the bottom of an extruded polygon open.
  * @param [options.arcType = ArcType.GEODESIC] - The type of line the polygon edges must follow. Valid options are {@link ArcType.GEODESIC} and {@link ArcType.RHUMB}.
+ * @param [options.textureCoordinates] - Texture coordinates as a {@link PolygonHierarchy} of {@link Cartesian2} points. Has no effect for ground primitives.
  */
 export class PolygonGeometry {
     constructor(options: {
@@ -12604,6 +12714,7 @@ export class PolygonGeometry {
         closeTop?: boolean;
         closeBottom?: boolean;
         arcType?: ArcType;
+        textureCoordinates?: PolygonHierarchy;
     });
     /**
      * The number of elements used to pack the object into an array.
@@ -12635,6 +12746,7 @@ export class PolygonGeometry {
      * @param [options.closeTop = true] - When false, leaves off the top of an extruded polygon open.
      * @param [options.closeBottom = true] - When false, leaves off the bottom of an extruded polygon open.
      * @param [options.arcType = ArcType.GEODESIC] - The type of line the polygon edges must follow. Valid options are {@link ArcType.GEODESIC} and {@link ArcType.RHUMB}.
+     * @param [options.textureCoordinates] - Texture coordinates as a {@link PolygonHierarchy} of {@link Cartesian2} points. Has no effect for ground primitives.
      */
     static fromPositions(options: {
         positions: Cartesian3[];
@@ -12648,6 +12760,7 @@ export class PolygonGeometry {
         closeTop?: boolean;
         closeBottom?: boolean;
         arcType?: ArcType;
+        textureCoordinates?: PolygonHierarchy;
     }): PolygonGeometry;
     /**
      * Stores the provided instance into the provided array.
@@ -14387,6 +14500,36 @@ export enum RequestType {
     OTHER = 3
 }
 
+export namespace Resource {
+    /**
+     * Initialization options for the Resource constructor
+     * @property url - The url of the resource.
+     * @property [queryParameters] - An object containing query parameters that will be sent when retrieving the resource.
+     * @property [templateValues] - Key/Value pairs that are used to replace template values (eg. {x}).
+     * @property [headers = {}] - Additional HTTP headers that will be sent.
+     * @property [proxy] - A proxy to be used when loading the resource.
+     * @property [retryCallback] - The Function to call when a request for this resource fails. If it returns true, the request will be retried.
+     * @property [retryAttempts = 0] - The number of times the retryCallback should be called before giving up.
+     * @property [request] - A Request object that will be used. Intended for internal use only.
+     */
+    type ConstructorOptions = {
+        url: string;
+        queryParameters?: any;
+        templateValues?: any;
+        headers?: any;
+        proxy?: Proxy;
+        retryCallback?: Resource.RetryCallback;
+        retryAttempts?: number;
+        request?: Request;
+    };
+    /**
+     * A function that returns the value of the property.
+     * @param [resource] - The resource that failed to load.
+     * @param [error] - The error that occurred during the loading of the resource.
+     */
+    type RetryCallback = (resource?: Resource, error?: Error) => boolean | Promise<boolean>;
+}
+
 /**
  * A resource that includes the location and any other parameters we need to retrieve it or create derived resources. It also provides the ability to retry requests.
  * @example
@@ -14418,27 +14561,10 @@ export enum RequestType {
  *    retryCallback: refreshTokenRetryCallback,
  *    retryAttempts: 1
  * });
- * @param options - A url or an object with the following properties
- * @param options.url - The url of the resource.
- * @param [options.queryParameters] - An object containing query parameters that will be sent when retrieving the resource.
- * @param [options.templateValues] - Key/Value pairs that are used to replace template values (eg. {x}).
- * @param [options.headers = {}] - Additional HTTP headers that will be sent.
- * @param [options.proxy] - A proxy to be used when loading the resource.
- * @param [options.retryCallback] - The Function to call when a request for this resource fails. If it returns true, the request will be retried.
- * @param [options.retryAttempts = 0] - The number of times the retryCallback should be called before giving up.
- * @param [options.request] - A Request object that will be used. Intended for internal use only.
+ * @param options - A url or an object describing initialization options
  */
 export class Resource {
-    constructor(options: {
-        url: string;
-        queryParameters?: any;
-        templateValues?: any;
-        headers?: any;
-        proxy?: Proxy;
-        retryCallback?: Resource.RetryCallback;
-        retryAttempts?: number;
-        request?: Request;
-    });
+    constructor(options: string | Resource.ConstructorOptions);
     /**
      * Additional HTTP headers that will be sent with the request.
      */
@@ -14673,7 +14799,7 @@ export class Resource {
         preferImageBitmap?: boolean;
         flipY?: boolean;
         skipColorSpaceConversion?: boolean;
-    }): Promise<ImageBitmap> | Promise<HTMLImageElement> | undefined;
+    }): Promise<ImageBitmap | HTMLImageElement> | undefined;
     /**
      * Creates a Resource and calls fetchImage() on it.
      * @param options - A url or an object with the following properties
@@ -14704,7 +14830,7 @@ export class Resource {
         preferBlob?: boolean;
         preferImageBitmap?: boolean;
         skipColorSpaceConversion?: boolean;
-    }): Promise<ImageBitmap> | Promise<HTMLImageElement> | undefined;
+    }): Promise<ImageBitmap | HTMLImageElement> | undefined;
     /**
      * Asynchronously loads the given resource as text.  Returns a promise that will resolve to
      * a String once loaded, or reject if the resource failed to load.  The data is loaded
@@ -15236,15 +15362,6 @@ export class Resource {
     static readonly DEFAULT: Resource;
 }
 
-export namespace Resource {
-    /**
-     * A function that returns the value of the property.
-     * @param [resource] - The resource that failed to load.
-     * @param [error] - The error that occurred during the loading of the resource.
-     */
-    type RetryCallback = (resource?: Resource, error?: Error) => boolean | Promise<boolean>;
-}
-
 /**
  * Constructs an exception object that is thrown due to an error that can occur at runtime, e.g.,
  * out of memory, could not compile shader, etc.  If a function may throw this
@@ -15271,6 +15388,58 @@ export class RuntimeError extends Error {
     readonly stack: string;
 }
 
+export namespace ScreenSpaceEventHandler {
+    /**
+     * An Event that occurs at a single position on screen.
+     */
+    type PositionedEvent = {
+        position: Cartesian2;
+    };
+    /**
+     * @param event - The event which triggered the listener
+     */
+    type PositionedEventCallback = (event: ScreenSpaceEventHandler.PositionedEvent) => void;
+    /**
+     * An Event that starts at one position and ends at another.
+     */
+    type MotionEvent = {
+        startPosition: Cartesian2;
+        endPosition: Cartesian2;
+    };
+    /**
+     * @param event - The event which triggered the listener
+     */
+    type MotionEventCallback = (event: ScreenSpaceEventHandler.MotionEvent) => void;
+    /**
+     * An Event that occurs at a two positions on screen.
+     */
+    type TwoPointEvent = {
+        position1: Cartesian2;
+        position2: Cartesian2;
+    };
+    /**
+     * @param event - The event which triggered the listener
+     */
+    type TwoPointEventCallback = (event: ScreenSpaceEventHandler.TwoPointEvent) => void;
+    /**
+     * An Event that starts at a two positions on screen and moves to two other positions.
+     */
+    type TwoPointMotionEvent = {
+        position1: Cartesian2;
+        position2: Cartesian2;
+        previousPosition1: Cartesian2;
+        previousPosition2: Cartesian2;
+    };
+    /**
+     * @param event - The event which triggered the listener
+     */
+    type TwoPointMotionEventCallback = (event: ScreenSpaceEventHandler.TwoPointMotionEvent) => void;
+    /**
+     * @param delta - The amount that the mouse wheel moved
+     */
+    type WheelEventCallback = (delta: number) => void;
+}
+
 /**
  * Handles user input events. Custom functions can be added to be executed on
  * when the user enters input.
@@ -15285,7 +15454,7 @@ export class ScreenSpaceEventHandler {
      * @param [modifier] - A KeyboardEventModifier key that is held when a <code>type</code>
      * event occurs.
      */
-    setInputAction(action: (...params: any[]) => any, type: number, modifier?: number): void;
+    setInputAction(action: ScreenSpaceEventHandler.PositionedEventCallback | ScreenSpaceEventHandler.MotionEventCallback | ScreenSpaceEventHandler.WheelEventCallback | ScreenSpaceEventHandler.TwoPointEventCallback | ScreenSpaceEventHandler.TwoPointMotionEventCallback, type: ScreenSpaceEventType, modifier?: KeyboardEventModifier): void;
     /**
      * Returns the function to be executed on an input event.
      * @param type - The ScreenSpaceEventType of input event.
@@ -15293,14 +15462,14 @@ export class ScreenSpaceEventHandler {
      * event occurs.
      * @returns The function to be executed on an input event.
      */
-    getInputAction(type: number, modifier?: number): (...params: any[]) => any;
+    getInputAction(type: ScreenSpaceEventType, modifier?: KeyboardEventModifier): ScreenSpaceEventHandler.PositionedEventCallback | ScreenSpaceEventHandler.MotionEventCallback | ScreenSpaceEventHandler.WheelEventCallback | ScreenSpaceEventHandler.TwoPointEventCallback | ScreenSpaceEventHandler.TwoPointMotionEventCallback;
     /**
      * Removes the function to be executed on an input event.
      * @param type - The ScreenSpaceEventType of input event.
      * @param [modifier] - A KeyboardEventModifier key that is held when a <code>type</code>
      * event occurs.
      */
-    removeInputAction(type: number, modifier?: number): void;
+    removeInputAction(type: ScreenSpaceEventType, modifier?: KeyboardEventModifier): void;
     /**
      * Returns true if this object was destroyed; otherwise, false.
      * <br /><br />
@@ -15752,6 +15921,68 @@ export class Spline {
 }
 
 /**
+ * A spline that is composed of piecewise constants representing a step function.
+ * @example
+ * const times = [ 0.0, 1.5, 3.0, 4.5, 6.0 ];
+ * const spline = new Cesium.SteppedSpline({
+ *     times : times,
+ *     points : [
+ *         new Cesium.Cartesian3(1235398.0, -4810983.0, 4146266.0),
+ *         new Cesium.Cartesian3(1372574.0, -5345182.0, 4606657.0),
+ *         new Cesium.Cartesian3(-757983.0, -5542796.0, 4514323.0),
+ *         new Cesium.Cartesian3(-2821260.0, -5248423.0, 4021290.0),
+ *         new Cesium.Cartesian3(-2539788.0, -4724797.0, 3620093.0)
+ *     ]
+ * });
+ *
+ * const p0 = spline.evaluate(times[0]);
+ * @param options - Object with the following properties:
+ * @param options.times - An array of strictly increasing, unit-less, floating-point times at each point. The values are in no way connected to the clock time. They are the parameterization for the curve.
+ * @param options.points - The array of control points.
+ */
+export class SteppedSpline {
+    constructor(options: {
+        times: number[];
+        points: number[] | Cartesian3[] | Quaternion[];
+    });
+    /**
+     * An array of times for the control points.
+     */
+    readonly times: number[];
+    /**
+     * An array of control points.
+     */
+    readonly points: number[] | Cartesian3[] | Quaternion[];
+    /**
+     * Finds an index <code>i</code> in <code>times</code> such that the parameter
+     * <code>time</code> is in the interval <code>[times[i], times[i + 1]]</code>.
+     * @param time - The time.
+     * @param startIndex - The index from which to start the search.
+     * @returns The index for the element at the start of the interval.
+     */
+    findTimeInterval(time: number, startIndex: number): number;
+    /**
+     * Wraps the given time to the period covered by the spline.
+     * @param time - The time.
+     * @returns The time, wrapped around to the updated animation.
+     */
+    wrapTime(time: number): number;
+    /**
+     * Clamps the given time to the period covered by the spline.
+     * @param time - The time.
+     * @returns The time, clamped to the animation period.
+     */
+    clampTime(time: number): number;
+    /**
+     * Evaluates the curve at a given time.
+     * @param time - The time at which to evaluate the curve.
+     * @param [result] - The object onto which to store the result.
+     * @returns The modified result parameter or a new instance of the point on the curve at the given time.
+     */
+    evaluate(time: number, result?: Cartesian3 | Quaternion): number | Cartesian3 | Quaternion;
+}
+
+/**
  * A wrapper around a web worker that allows scheduling tasks for a given worker,
  * returning results asynchronously via a promise.
  *
@@ -15882,6 +16113,14 @@ export class TerrainData {
     wasCreatedByUpsampling(): boolean;
 }
 
+export namespace TerrainProvider {
+    /**
+     * A function that is called when an error occurs.
+     * @param err - An object holding details about the error that occurred.
+     */
+    type ErrorEvent = (this: TerrainProvider, err: TileProviderError) => void;
+}
+
 /**
  * Provides terrain or other geometry for the surface of an ellipsoid.  The surface geometry is
  * organized into a pyramid of tiles according to a {@link TilingScheme}.  This type describes an
@@ -15894,7 +16133,7 @@ export class TerrainProvider {
      * to the event, you will be notified of the error and can potentially recover from it.  Event listeners
      * are passed an instance of {@link TileProviderError}.
      */
-    readonly errorEvent: Event;
+    readonly errorEvent: Event<TerrainProvider.ErrorEvent>;
     /**
      * Gets the credit to display when this terrain provider is active.  Typically this is used to credit
      * the source of the terrain. This function should
@@ -17638,66 +17877,6 @@ export class WebMercatorTilingScheme {
 }
 
 /**
- * A spline that linearly interpolates over an array of weight values used by morph targets.
- * @example
- * const times = [ 0.0, 1.5, 3.0, 4.5, 6.0 ];
- * const weights = [0.0, 1.0, 0.25, 0.75, 0.5, 0.5, 0.75, 0.25, 1.0, 0.0]; //Two targets
- * const spline = new Cesium.WeightSpline({
- *     times : times,
- *     weights : weights
- * });
- *
- * const p0 = spline.evaluate(times[0]);
- * @param options - Object with the following properties:
- * @param options.times - An array of strictly increasing, unit-less, floating-point times at each point.
- *                The values are in no way connected to the clock time. They are the parameterization for the curve.
- * @param options.weights - The array of floating-point control weights given. The weights are ordered such
- *                that all weights for the targets are given in chronological order and order in which they appear in
- *                the glTF from which the morph targets come. This means for 2 targets, weights = [w(0,0), w(0,1), w(1,0), w(1,1) ...]
- *                where i and j in w(i,j) are the time indices and target indices, respectively.
- */
-export class WeightSpline {
-    constructor(options: {
-        times: number[];
-        weights: number[];
-    });
-    /**
-     * An array of times for the control weights.
-     */
-    readonly times: number[];
-    /**
-     * An array of floating-point array control weights.
-     */
-    readonly weights: number[];
-    /**
-     * Finds an index <code>i</code> in <code>times</code> such that the parameter
-     * <code>time</code> is in the interval <code>[times[i], times[i + 1]]</code>.
-     * @param time - The time.
-     * @returns The index for the element at the start of the interval.
-     */
-    findTimeInterval(time: number): number;
-    /**
-     * Wraps the given time to the period covered by the spline.
-     * @param time - The time.
-     * @returns The time, wrapped around to the updated animation.
-     */
-    wrapTime(time: number): number;
-    /**
-     * Clamps the given time to the period covered by the spline.
-     * @param time - The time.
-     * @returns The time, clamped to the animation period.
-     */
-    clampTime(time: number): number;
-    /**
-     * Evaluates the curve at a given time.
-     * @param time - The time at which to evaluate the curve.
-     * @param [result] - The object onto which to store the result.
-     * @returns The modified result parameter or a new instance of the point on the curve at the given time.
-     */
-    evaluate(time: number, result?: number[]): number[];
-}
-
-/**
  * Winding order defines the order of vertices for a triangle to be considered front-facing.
  */
 export enum WindingOrder {
@@ -18546,11 +18725,11 @@ export class CallbackProperty {
     readonly definitionChanged: Event;
     /**
      * Gets the value of the property.
-     * @param [time] - The time for which to retrieve the value.  This parameter is unused since the value does not change with respect to time.
+     * @param time - The time for which to retrieve the value.
      * @param [result] - The object to store the value into, if omitted, a new instance is created and returned.
      * @returns The modified result parameter or a new instance if the result parameter was not supplied or is unsupported.
      */
-    getValue(time?: JulianDate, result?: any): any;
+    getValue(time: JulianDate, result?: any): any;
     /**
      * Sets the callback to be used.
      * @param callback - The function to be called when the property is evaluated.
@@ -18569,10 +18748,10 @@ export class CallbackProperty {
 export namespace CallbackProperty {
     /**
      * A function that returns the value of the property.
-     * @param [time] - The time for which to retrieve the value.
-     * @param [result] - The object to store the value into, if omitted, a new instance is created and returned.
+     * @param time - The time for which to retrieve the value.
+     * @param [result] - The object to store the value into. If omitted, the function must create and return a new instance.
      */
-    type Callback = (time?: JulianDate, result?: any) => any;
+    type Callback = (time: JulianDate, result?: any) => any;
 }
 
 export namespace Cesium3DTilesetGraphics {
@@ -18960,7 +19139,7 @@ export class CompositePositionProperty {
      * @param [result] - The object to store the value into, if omitted, a new instance is created and returned.
      * @returns The modified result parameter or a new instance if the result parameter was not supplied.
      */
-    getValue(time: JulianDate, result?: any): any;
+    getValue(time: JulianDate, result?: Cartesian3): Cartesian3 | undefined;
     /**
      * Gets the value of the property at the provided time and in the provided reference frame.
      * @param time - The time for which to retrieve the value.
@@ -18968,7 +19147,7 @@ export class CompositePositionProperty {
      * @param [result] - The object to store the value into, if omitted, a new instance is created and returned.
      * @returns The modified result parameter or a new instance if the result parameter was not supplied.
      */
-    getValueInReferenceFrame(time: JulianDate, referenceFrame: ReferenceFrame, result?: Cartesian3): Cartesian3;
+    getValueInReferenceFrame(time: JulianDate, referenceFrame: ReferenceFrame, result?: Cartesian3): Cartesian3 | undefined;
     /**
      * Compares this property to the provided property and returns
      * <code>true</code> if they are equal, <code>false</code> otherwise.
@@ -19515,7 +19694,7 @@ export class CylinderGraphics {
 
 export namespace CzmlDataSource {
     /**
-     * Initialization options for the `load` method.
+     * Initialization options for the <code>load</code> method.
      * @property [sourceUri] - Overrides the url to use for resolving relative links.
      * @property [credit] - A credit for the data source, which is displayed on the canvas.
      */
@@ -19523,6 +19702,7 @@ export namespace CzmlDataSource {
         sourceUri?: Resource | string;
         credit?: Credit | string;
     };
+    type UpdaterFunction = (entity: Entity, packet: any, entityCollection: EntityCollection, sourceUri: string) => void;
 }
 
 /**
@@ -19583,17 +19763,14 @@ export class CzmlDataSource {
     /**
      * Gets the array of CZML processing functions.
      */
-    static updaters: any[];
+    static updaters: CzmlDataSource.UpdaterFunction[];
     /**
      * Processes the provided url or CZML object without clearing any existing data.
      * @param czml - A url or CZML object to be processed.
-     * @param [options] - An object with the following properties:
-     * @param [options.sourceUri] - Overrides the url to use for resolving relative links.
+     * @param [options] - An object specifying configuration options
      * @returns A promise that resolves to this instances once the data is processed.
      */
-    process(czml: Resource | string | any, options?: {
-        sourceUri?: string;
-    }): Promise<CzmlDataSource>;
+    process(czml: Resource | string | any, options?: CzmlDataSource.LoadOptions): Promise<CzmlDataSource>;
     /**
      * Loads the provided url or CZML object, replacing any existing data.
      * @param czml - A url or CZML object to be processed.
@@ -19676,11 +19853,11 @@ export class DataSource {
     /**
      * Gets an event that will be raised if an error is encountered during processing.
      */
-    errorEvent: Event;
+    errorEvent: Event<(arg0: this, arg1: RequestErrorEvent) => void>;
     /**
      * Gets an event that will be raised when the value of isLoading changes.
      */
-    loadingEvent: Event;
+    loadingEvent: Event<(arg0: this, arg1: boolean) => void>;
     /**
      * Gets whether or not this data source should be displayed.
      */
@@ -20602,7 +20779,7 @@ export class EntityCluster {
     /**
      * Gets the event that will be raised when a new cluster will be displayed. The signature of the event listener is {@link EntityCluster.newClusterCallback}.
      */
-    clusterEvent: Event;
+    clusterEvent: Event<EntityCluster.newClusterCallback>;
     /**
      * Gets or sets whether clustering billboard entities is enabled.
      */
@@ -20636,10 +20813,14 @@ export namespace EntityCluster {
      *     cluster.label.text = entities.length.toLocaleString();
      * });
      * @param clusteredEntities - An array of the entities contained in the cluster.
-     * @param cluster - An object containing billboard, label, and point properties. The values are the same as
-     * billboard, label and point entities, but must be the values of the ConstantProperty.
+     * @param cluster - An object containing the Billboard, Label, and Point
+     * primitives that represent this cluster of entities.
      */
-    type newClusterCallback = (clusteredEntities: Entity[], cluster: any) => void;
+    type newClusterCallback = (clusteredEntities: Entity[], cluster: {
+        billboard: Billboard;
+        label: Label;
+        point: PointPrimitive;
+    }) => void;
 }
 
 /**
@@ -20666,18 +20847,10 @@ export class EntityCollection {
      */
     resumeEvents(): void;
     /**
-     * The signature of the event generated by {@link EntityCollection#collectionChanged}.
-     * @param collection - The collection that triggered the event.
-     * @param added - The array of {@link Entity} instances that have been added to the collection.
-     * @param removed - The array of {@link Entity} instances that have been removed from the collection.
-     * @param changed - The array of {@link Entity} instances that have been modified.
-     */
-    static collectionChangedEventCallback(collection: EntityCollection, added: Entity[], removed: Entity[], changed: Entity[]): void;
-    /**
      * Gets the event that is fired when entities are added or removed from the collection.
-     * The generated event is a {@link EntityCollection.collectionChangedEventCallback}.
+     * The generated event is a {@link EntityCollection.CollectionChangedEventCallback}.
      */
-    readonly collectionChanged: Event;
+    readonly collectionChanged: Event<EntityCollection.CollectionChangedEventCallback>;
     /**
      * Gets a globally unique identifier for this collection.
      */
@@ -20747,6 +20920,17 @@ export class EntityCollection {
     getOrCreateEntity(id: string): Entity;
 }
 
+export namespace EntityCollection {
+    /**
+     * The signature of the event generated by {@link EntityCollection#collectionChanged}.
+     * @param collection - The collection that triggered the event.
+     * @param added - The array of {@link Entity} instances that have been added to the collection.
+     * @param removed - The array of {@link Entity} instances that have been removed from the collection.
+     * @param changed - The array of {@link Entity} instances that have been modified.
+     */
+    type CollectionChangedEventCallback = (collection: EntityCollection, added: Entity[], removed: Entity[], changed: Entity[]) => void;
+}
+
 /**
  * A utility object for tracking an entity with the camera.
  * @param entity - The entity to track with the camera.
@@ -20787,8 +20971,9 @@ export class EntityView {
 
 export namespace GeoJsonDataSource {
     /**
-     * Initialization options for the `load` method.
+     * Initialization options for the <code>load</code> method.
      * @property [sourceUri] - Overrides the url to use for resolving relative links.
+     * @property [describe = GeoJsonDataSource.defaultDescribeProperty] - A function which returns a Property object (or just a string).
      * @property [markerSize = GeoJsonDataSource.markerSize] - The default size of the map pin created for each point, in pixels.
      * @property [markerSymbol = GeoJsonDataSource.markerSymbol] - The default symbol of the map pin created for each point.
      * @property [markerColor = GeoJsonDataSource.markerColor] - The default color of the map pin created for each point.
@@ -20800,6 +20985,7 @@ export namespace GeoJsonDataSource {
      */
     type LoadOptions = {
         sourceUri?: string;
+        describe?: GeoJsonDataSource.describe;
         markerSize?: number;
         markerSymbol?: string;
         markerColor?: Color;
@@ -20937,32 +21123,17 @@ export class GeoJsonDataSource {
     /**
      * Asynchronously loads the provided GeoJSON or TopoJSON data, replacing any existing data.
      * @param data - A url, GeoJSON object, or TopoJSON object to be loaded.
-     * @param [options] - An object with the following properties:
-     * @param [options.sourceUri] - Overrides the url to use for resolving relative links.
-     * @param [options.describe = GeoJsonDataSource.defaultDescribeProperty] - A function which returns a Property object (or just a string),
-     *                                                                                which converts the properties into an html description.
-     * @param [options.markerSize = GeoJsonDataSource.markerSize] - The default size of the map pin created for each point, in pixels.
-     * @param [options.markerSymbol = GeoJsonDataSource.markerSymbol] - The default symbol of the map pin created for each point.
-     * @param [options.markerColor = GeoJsonDataSource.markerColor] - The default color of the map pin created for each point.
-     * @param [options.stroke = GeoJsonDataSource.stroke] - The default color of polylines and polygon outlines.
-     * @param [options.strokeWidth = GeoJsonDataSource.strokeWidth] - The default width of polylines and polygon outlines.
-     * @param [options.fill = GeoJsonDataSource.fill] - The default color for polygon interiors.
-     * @param [options.clampToGround = GeoJsonDataSource.clampToGround] - true if we want the features clamped to the ground.
-     * @param [options.credit] - A credit for the data source, which is displayed on the canvas.
+     * @param [options] - An object specifying configuration options
      * @returns a promise that will resolve when the GeoJSON is loaded.
      */
-    load(data: Resource | string | any, options?: {
-        sourceUri?: string;
-        describe?: GeoJsonDataSource.describe;
-        markerSize?: number;
-        markerSymbol?: string;
-        markerColor?: Color;
-        stroke?: Color;
-        strokeWidth?: number;
-        fill?: Color;
-        clampToGround?: boolean;
-        credit?: Credit | string;
-    }): Promise<GeoJsonDataSource>;
+    load(data: Resource | string | any, options?: GeoJsonDataSource.LoadOptions): Promise<GeoJsonDataSource>;
+    /**
+     * Asynchronously loads the provided GeoJSON or TopoJSON data, without replacing any existing data.
+     * @param data - A url, GeoJSON object, or TopoJSON object to be loaded.
+     * @param [options] - An object specifying configuration options
+     * @returns a promise that will resolve when the GeoJSON is loaded.
+     */
+    process(data: Resource | string | any, options?: GeoJsonDataSource.LoadOptions): Promise<GeoJsonDataSource>;
     /**
      * Updates the data source to the provided time.  This function is optional and
      * is not required to be implemented.  It is provided for data sources which
@@ -21399,21 +21570,34 @@ export class KmlCamera {
 export namespace KmlDataSource {
     /**
      * Initialization options for the `load` method.
-     * @property camera - The camera that is used for viewRefreshModes and sending camera properties to network links.
-     * @property canvas - The canvas that is used for sending viewer properties to network links.
      * @property [sourceUri] - Overrides the url to use for resolving relative links and other KML network features.
      * @property [clampToGround = false] - true if we want the geometry features (Polygons, LineStrings and LinearRings) clamped to the ground.
      * @property [ellipsoid = Ellipsoid.WGS84] - The global ellipsoid used for geographical calculations.
-     * @property [credit] - A credit for the data source, which is displayed on the canvas.
      * @property [screenOverlayContainer] - A container for ScreenOverlay images.
      */
     type LoadOptions = {
-        camera: Camera;
-        canvas: HTMLCanvasElement;
         sourceUri?: string;
         clampToGround?: boolean;
         ellipsoid?: Ellipsoid;
+        screenOverlayContainer?: Element | string;
+    };
+    /**
+     * Options for constructing a new KmlDataSource, or calling the static `load` method.
+     * @property [camera] - The camera that is used for viewRefreshModes and sending camera properties to network links.
+     * @property [canvas] - The canvas that is used for sending viewer properties to network links.
+     * @property [credit] - A credit for the data source, which is displayed on the canvas.
+     * @property [sourceUri] - Overrides the url to use for resolving relative links and other KML network features.
+     * @property [clampToGround = false] - true if we want the geometry features (Polygons, LineStrings and LinearRings) clamped to the ground.
+     * @property [ellipsoid = Ellipsoid.WGS84] - The global ellipsoid used for geographical calculations.
+     * @property [screenOverlayContainer] - A container for ScreenOverlay images.
+     */
+    type ConstructorOptions = {
+        camera?: Camera;
+        canvas?: HTMLCanvasElement;
         credit?: Credit | string;
+        sourceUri?: string;
+        clampToGround?: boolean;
+        ellipsoid?: Ellipsoid;
         screenOverlayContainer?: Element | string;
     };
 }
@@ -21440,26 +21624,29 @@ export namespace KmlDataSource {
  *           canvas: viewer.scene.canvas
  *      })
  * );
- * @param options - An object with the following properties:
- * @param options.camera - The camera that is used for viewRefreshModes and sending camera properties to network links.
- * @param options.canvas - The canvas that is used for sending viewer properties to network links.
- * @param [options.ellipsoid = Ellipsoid.WGS84] - The global ellipsoid used for geographical calculations.
- * @param [options.credit] - A credit for the data source, which is displayed on the canvas.
+ * @param [options] - Object describing initialization options
  */
 export class KmlDataSource {
-    constructor(options: {
-        camera: Camera;
-        canvas: HTMLCanvasElement;
-        ellipsoid?: Ellipsoid;
-        credit?: Credit | string;
-    });
+    constructor(options?: KmlDataSource.ConstructorOptions);
+    /**
+     * The current size of this Canvas will be used to populate the Link parameters
+     * for client height and width.
+     */
+    canvas: HTMLCanvasElement | undefined;
+    /**
+     * The position and orientation of this {@link Camera} will be used to
+     * populate various camera parameters when making network requests.
+     * Camera movement will determine when to trigger NetworkLink refresh if
+     * <code>viewRefreshMode</code> is <code>onStop</code>.
+     */
+    camera: Camera | undefined;
     /**
      * Creates a Promise to a new instance loaded with the provided KML data.
      * @param data - A url, parsed KML document, or Blob containing binary KMZ data or a parsed KML document.
      * @param [options] - An object specifying configuration options
      * @returns A promise that will resolve to a new KmlDataSource instance once the KML is loaded.
      */
-    static load(data: Resource | string | Document | Blob, options?: KmlDataSource.LoadOptions): Promise<KmlDataSource>;
+    static load(data: Resource | string | Document | Blob, options?: KmlDataSource.ConstructorOptions): Promise<KmlDataSource>;
     /**
      * Gets or sets a human-readable name for this instance.
      * This will be automatically be set to the KML document name on load.
@@ -21518,19 +21705,10 @@ export class KmlDataSource {
     /**
      * Asynchronously loads the provided KML data, replacing any existing data.
      * @param data - A url, parsed KML document, or Blob containing binary KMZ data or a parsed KML document.
-     * @param [options] - An object with the following properties:
-     * @param [options.sourceUri] - Overrides the url to use for resolving relative links and other KML network features.
-     * @param [options.clampToGround = false] - true if we want the geometry features (Polygons, LineStrings and LinearRings) clamped to the ground. If true, lines will use corridors so use Entity.corridor instead of Entity.polyline.
-     * @param [options.ellipsoid = Ellipsoid.WGS84] - The global ellipsoid used for geographical calculations.
-     * @param [options.screenOverlayContainer] - A container for ScreenOverlay images.
+     * @param [options] - An object specifying configuration options
      * @returns A promise that will resolve to this instances once the KML is loaded.
      */
-    load(data: Resource | string | Document | Blob, options?: {
-        sourceUri?: Resource | string;
-        clampToGround?: boolean;
-        ellipsoid?: Ellipsoid;
-        screenOverlayContainer?: Element | string;
-    }): Promise<KmlDataSource>;
+    load(data: Resource | string | Document | Blob, options?: KmlDataSource.LoadOptions): Promise<KmlDataSource>;
     /**
      * Cleans up any non-entity elements created by the data source. Currently this only affects ScreenOverlay elements.
      */
@@ -22658,7 +22836,7 @@ export namespace PolygonGraphics {
      * @property [heightReference = HeightReference.NONE] - A Property specifying what the height is relative to.
      * @property [extrudedHeight] - A numeric Property specifying the altitude of the polygon's extruded face relative to the ellipsoid surface.
      * @property [extrudedHeightReference = HeightReference.NONE] - A Property specifying what the extrudedHeight is relative to.
-     * @property [stRotation = 0.0] - A numeric property specifying the rotation of the polygon texture counter-clockwise from north.
+     * @property [stRotation = 0.0] - A numeric property specifying the rotation of the polygon texture counter-clockwise from north. Only has an effect if textureCoordinates is not defined.
      * @property [granularity = Cesium.Math.RADIANS_PER_DEGREE] - A numeric Property specifying the angular distance between each latitude and longitude point.
      * @property [fill = true] - A boolean Property specifying whether the polygon is filled with the provided material.
      * @property [material = Color.WHITE] - A Property specifying the material used to fill the polygon.
@@ -22673,6 +22851,7 @@ export namespace PolygonGraphics {
      * @property [distanceDisplayCondition] - A Property specifying at what distance from the camera that this polygon will be displayed.
      * @property [classificationType = ClassificationType.BOTH] - An enum Property specifying whether this polygon will classify terrain, 3D Tiles, or both when on the ground.
      * @property [zIndex = 0] - A property specifying the zIndex used for ordering ground geometry.  Only has an effect if the polygon is constant and neither height or extrudedHeight are specified.
+     * @property [textureCoordinates] - A Property specifying texture coordinates as a {@link PolygonHierarchy} of {@link Cartesian2} points. Has no effect for ground primitives.
      */
     type ConstructorOptions = {
         show?: Property | boolean;
@@ -22696,6 +22875,7 @@ export namespace PolygonGraphics {
         distanceDisplayCondition?: Property | DistanceDisplayCondition;
         classificationType?: Property | ClassificationType;
         zIndex?: ConstantProperty | number;
+        textureCoordinates?: Property | PolygonHierarchy;
     };
 }
 
@@ -22738,7 +22918,7 @@ export class PolygonGraphics {
      */
     extrudedHeightReference: Property | undefined;
     /**
-     * Gets or sets the numeric property specifying the rotation of the polygon texture counter-clockwise from north.
+     * Gets or sets the numeric property specifying the rotation of the polygon texture counter-clockwise from north. Only has an effect if textureCoordinates is not defined.
      */
     stRotation: Property | undefined;
     /**
@@ -22803,6 +22983,10 @@ export class PolygonGraphics {
      * Gets or sets the zIndex Prperty specifying the ordering of ground geometry.  Only has an effect if the polygon is constant and neither height or extrudedHeight are specified.
      */
     zIndex: ConstantProperty | undefined;
+    /**
+     * A Property specifying texture coordinates as a {@link PolygonHierarchy} of {@link Cartesian2} points. Has no effect for ground primitives.
+     */
+    textureCoordinates: Property | undefined;
     /**
      * Duplicates this instance.
      * @param [result] - The object onto which to store the result.
@@ -23461,7 +23645,7 @@ export class PositionProperty {
      * @param [result] - The object to store the value into, if omitted, a new instance is created and returned.
      * @returns The modified result parameter or a new instance if the result parameter was not supplied.
      */
-    getValue(time: JulianDate, result?: Cartesian3): Cartesian3;
+    getValue(time: JulianDate, result?: Cartesian3): Cartesian3 | undefined;
     /**
      * Gets the value of the property at the provided time and in the provided reference frame.
      * @param time - The time for which to retrieve the value.
@@ -23469,7 +23653,7 @@ export class PositionProperty {
      * @param [result] - The object to store the value into, if omitted, a new instance is created and returned.
      * @returns The modified result parameter or a new instance if the result parameter was not supplied.
      */
-    getValueInReferenceFrame(time: JulianDate, referenceFrame: ReferenceFrame, result?: Cartesian3): Cartesian3;
+    getValueInReferenceFrame(time: JulianDate, referenceFrame: ReferenceFrame, result?: Cartesian3): Cartesian3 | undefined;
     /**
      * Compares this property to the provided property and returns
      * <code>true</code> if they are equal, <code>false</code> otherwise.
@@ -23603,7 +23787,7 @@ export class PropertyArray {
     equals(other?: Property): boolean;
 }
 
-export interface PropertyBag extends DictionaryLike {
+export interface PropertyBag extends Record<string, any> {
 }
 
 /**
@@ -23611,7 +23795,7 @@ export interface PropertyBag extends DictionaryLike {
  * @param [value] - An object, containing key-value mapping of property names to properties.
  * @param [createPropertyCallback] - A function that will be called when the value of any of the properties in value are not a Property.
  */
-export class PropertyBag implements DictionaryLike {
+export class PropertyBag implements Record<string, any> {
     constructor(value?: any, createPropertyCallback?: (...params: any[]) => any);
     /**
      * Gets the names of all properties registered on this instance.
@@ -24073,7 +24257,7 @@ export class SampledPositionProperty {
      * @param [result] - The object to store the value into, if omitted, a new instance is created and returned.
      * @returns The modified result parameter or a new instance if the result parameter was not supplied.
      */
-    getValue(time: JulianDate, result?: Cartesian3): Cartesian3;
+    getValue(time: JulianDate, result?: Cartesian3): Cartesian3 | undefined;
     /**
      * Gets the position at the provided time and in the provided reference frame.
      * @param time - The time for which to retrieve the value.
@@ -24081,7 +24265,7 @@ export class SampledPositionProperty {
      * @param [result] - The object to store the value into, if omitted, a new instance is created and returned.
      * @returns The modified result parameter or a new instance if the result parameter was not supplied.
      */
-    getValueInReferenceFrame(time: JulianDate, referenceFrame: ReferenceFrame, result?: Cartesian3): Cartesian3;
+    getValueInReferenceFrame(time: JulianDate, referenceFrame: ReferenceFrame, result?: Cartesian3): Cartesian3 | undefined;
     /**
      * Sets the algorithm and degree to use when interpolating a position.
      * @param [options] - Object with the following properties:
@@ -24383,18 +24567,18 @@ export class TimeIntervalCollectionPositionProperty {
     /**
      * Gets the interval collection.
      */
-    intervals: TimeIntervalCollection;
+    readonly intervals: TimeIntervalCollection;
     /**
      * Gets the reference frame in which the position is defined.
      */
-    referenceFrame: ReferenceFrame;
+    readonly referenceFrame: ReferenceFrame;
     /**
      * Gets the value of the property at the provided time in the fixed frame.
      * @param time - The time for which to retrieve the value.
      * @param [result] - The object to store the value into, if omitted, a new instance is created and returned.
      * @returns The modified result parameter or a new instance if the result parameter was not supplied.
      */
-    getValue(time: JulianDate, result?: any): any;
+    getValue(time: JulianDate, result?: any): Cartesian3 | undefined;
     /**
      * Gets the value of the property at the provided time and in the provided reference frame.
      * @param time - The time for which to retrieve the value.
@@ -24402,7 +24586,7 @@ export class TimeIntervalCollectionPositionProperty {
      * @param [result] - The object to store the value into, if omitted, a new instance is created and returned.
      * @returns The modified result parameter or a new instance if the result parameter was not supplied.
      */
-    getValueInReferenceFrame(time: JulianDate, referenceFrame: ReferenceFrame, result?: Cartesian3): Cartesian3;
+    getValueInReferenceFrame(time: JulianDate, referenceFrame: ReferenceFrame, result?: Cartesian3): Cartesian3 | undefined;
     /**
      * Compares this property to the provided property and returns
      * <code>true</code> if they are equal, <code>false</code> otherwise.
@@ -24460,7 +24644,7 @@ export class TimeIntervalCollectionProperty {
     /**
      * Gets the interval collection.
      */
-    intervals: TimeIntervalCollection;
+    readonly intervals: TimeIntervalCollection;
     /**
      * Gets the value of the property at the provided time.
      * @param time - The time for which to retrieve the value.
@@ -25175,11 +25359,9 @@ export class ArcGisMapServerImageryProvider {
      * @param level - The tile level.
      * @param [request] - The request object. Intended for internal use only.
      * @returns A promise for the image that will resolve when the image is available, or
-     *          undefined if there are too many active requests to the server, and the request
-     *          should be retried later.  The resolved image may be either an
-     *          Image or a Canvas DOM object.
+     *          undefined if there are too many active requests to the server, and the request should be retried later.
      */
-    requestImage(x: number, y: number, level: number, request?: Request): Promise<HTMLImageElement | HTMLCanvasElement> | undefined;
+    requestImage(x: number, y: number, level: number, request?: Request): Promise<ImageryTypes> | undefined;
     /**
      * /**
      * Asynchronously determines what features, if any, are located at a given longitude and latitude within
@@ -25929,11 +26111,9 @@ export class BingMapsImageryProvider {
      * @param level - The tile level.
      * @param [request] - The request object. Intended for internal use only.
      * @returns A promise for the image that will resolve when the image is available, or
-     *          undefined if there are too many active requests to the server, and the request
-     *          should be retried later.  The resolved image may be either an
-     *          Image or a Canvas DOM object.
+     *          undefined if there are too many active requests to the server, and the request should be retried later.
      */
-    requestImage(x: number, y: number, level: number, request?: Request): Promise<HTMLImageElement | HTMLCanvasElement> | undefined;
+    requestImage(x: number, y: number, level: number, request?: Request): Promise<ImageryTypes> | undefined;
     /**
      * Picking features is not currently supported by this imagery provider, so this function simply returns
      * undefined.
@@ -25942,12 +26122,9 @@ export class BingMapsImageryProvider {
      * @param level - The tile level.
      * @param longitude - The longitude at which to pick features.
      * @param latitude - The latitude at which to pick features.
-     * @returns A promise for the picked features that will resolve when the asynchronous
-     *                   picking completes.  The resolved value is an array of {@link ImageryLayerFeatureInfo}
-     *                   instances.  The array may be empty if no features are found at the given location.
-     *                   It may also be undefined if picking is not supported.
+     * @returns Undefined since picking is not supported.
      */
-    pickFeatures(x: number, y: number, level: number, longitude: number, latitude: number): Promise<ImageryLayerFeatureInfo[]> | undefined;
+    pickFeatures(x: number, y: number, level: number, longitude: number, latitude: number): undefined;
     /**
      * Converts a tiles (x, y, level) position into a quadkey used to request an image
      * from a Bing Maps server.
@@ -26169,6 +26346,28 @@ export class BoxEmitter {
 }
 
 /**
+ * An orientation given by a pair of unit vectors
+ * @property direction - The unit "direction" vector
+ * @property up - The unit "up" vector
+ */
+export type DirectionUp = {
+    direction: Cartesian3;
+    up: Cartesian3;
+};
+
+/**
+ * An orientation given by numeric heading, pitch, and roll
+ * @property [heading = 0.0] - The heading in radians
+ * @property [pitch = -Math.PI_OVER_TWO] - The pitch in radians
+ * @property [roll = 0.0] - The roll in meters
+ */
+export type HeadingPitchRollValues = {
+    heading?: number;
+    pitch?: number;
+    roll?: number;
+};
+
+/**
  * The camera is defined by a position, orientation, and view frustum.
  * <br /><br />
  * The orientation forms an orthonormal basis with a view, up and right = view x up unit vectors.
@@ -26372,7 +26571,7 @@ export class Camera {
      */
     setView(options: {
         destination?: Cartesian3 | Rectangle;
-        orientation?: any;
+        orientation?: HeadingPitchRollValues | DirectionUp;
         endTransform?: Matrix4;
         convert?: boolean;
     }): void;
@@ -27054,7 +27253,9 @@ export class Cesium3DTileContent {
      */
     readonly texturesByteLength: number;
     /**
-     * Gets the amount of memory used by the batch table textures, in bytes.
+     * Gets the amount of memory used by the batch table textures and any binary
+     * metadata properties not accounted for in geometryByteLength or
+     * texturesByteLength
      */
     readonly batchTableByteLength: number;
     /**
@@ -27119,11 +27320,11 @@ export class Cesium3DTileContent {
  * handler.setInputAction(function(movement) {
  *     const feature = scene.pick(movement.endPosition);
  *     if (feature instanceof Cesium.Cesium3DTileFeature) {
- *         const propertyNames = feature.getPropertyNames();
- *         const length = propertyNames.length;
+ *         const propertyIds = feature.getPropertyIds();
+ *         const length = propertyIds.length;
  *         for (let i = 0; i < length; ++i) {
- *             const propertyName = propertyNames[i];
- *             console.log(propertyName + ': ' + feature.getProperty(propertyName));
+ *             const propertyId = propertyIds[i];
+ *             console.log(`{propertyId}: ${feature.getProperty(propertyId)}`);
  *         }
  *     }
  * }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
@@ -27177,15 +27378,22 @@ export class Cesium3DTileFeature {
      */
     getPropertyNames(results?: string[]): string[];
     /**
+     * Returns an array of property IDs for the feature. This includes properties from this feature's
+     * class and inherited classes when using a batch table hierarchy.
+     * @param [results] - An array into which to store the results.
+     * @returns The IDs of the feature's properties.
+     */
+    getPropertyIds(results?: string[]): string[];
+    /**
      * Returns a copy of the value of the feature's property with the given name. This includes properties from this feature's
      * class and inherited classes when using a batch table hierarchy.
      * @example
      * // Display all the properties for a feature in the console log.
-     * const propertyNames = feature.getPropertyNames();
-     * const length = propertyNames.length;
+     * const propertyIds = feature.getPropertyIds();
+     * const length = propertyIds.length;
      * for (let i = 0; i < length; ++i) {
-     *     const propertyName = propertyNames[i];
-     *     console.log(propertyName + ': ' + feature.getProperty(propertyName));
+     *     const propertyId = propertyIds[i];
+     *     console.log(`{propertyId}: ${feature.getProperty(propertyId)}`);
      * }
      * @param name - The case-sensitive name of the property.
      * @returns The value of the property or <code>undefined</code> if the feature does not have this property.
@@ -27267,11 +27475,11 @@ export class Cesium3DTileFeature {
  * handler.setInputAction(function(movement) {
  *     const feature = scene.pick(movement.endPosition);
  *     if (feature instanceof Cesium.Cesium3DTilePointFeature) {
- *         const propertyNames = feature.getPropertyNames();
- *         const length = propertyNames.length;
+ *         const propertyIds = feature.getPropertyIds();
+ *         const length = propertyIds.length;
  *         for (let i = 0; i < length; ++i) {
- *             const propertyName = propertyNames[i];
- *             console.log(propertyName + ': ' + feature.getProperty(propertyName));
+ *             const propertyId = propertyIds[i];
+ *             console.log(`{propertyId}: ${feature.getProperty(propertyId)}`);
  *         }
  *     }
  * }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
@@ -27453,15 +27661,22 @@ export class Cesium3DTilePointFeature {
      */
     getPropertyNames(results?: string[]): string[];
     /**
+     * Returns an array of property IDs for the feature. This includes properties from this feature's
+     * class and inherited classes when using a batch table hierarchy.
+     * @param [results] - An array into which to store the results.
+     * @returns The IDs of the feature's properties.
+     */
+    getPropertyIds(results?: string[]): string[];
+    /**
      * Returns a copy of the value of the feature's property with the given name. This includes properties from this feature's
      * class and inherited classes when using a batch table hierarchy.
      * @example
      * // Display all the properties for a feature in the console log.
-     * const propertyNames = feature.getPropertyNames();
-     * const length = propertyNames.length;
+     * const propertyIds = feature.getPropertyIds();
+     * const length = propertyIds.length;
      * for (let i = 0; i < length; ++i) {
-     *     const propertyName = propertyNames[i];
-     *     console.log(propertyName + ': ' + feature.getProperty(propertyName));
+     *     const propertyId = propertyIds[i];
+     *     console.log(`{propertyId} : ${feature.getProperty(propertyId)}`);
      * }
      * @param name - The case-sensitive name of the property.
      * @returns The value of the property or <code>undefined</code> if the feature does not have this property.
@@ -27513,10 +27728,10 @@ export class Cesium3DTilePointFeature {
  *     color : 'vec4(${Temperature})',
  *     pointSize : '${Temperature} * 2.0'
  * });
- * @param [style] - The url of a style or an object defining a style.
+ * @param [style] - An object defining a style.
  */
 export class Cesium3DTileStyle {
-    constructor(style?: Resource | string | any);
+    constructor(style?: any);
     /**
      * Gets the object defining the style using the
      * {@link https://github.com/CesiumGS/3d-tiles/tree/main/specification/Styling|3D Tiles Styling language}.
@@ -27807,7 +28022,7 @@ export class Cesium3DTileStyle {
      * </p>
      * @example
      * const style = new Cesium3DTileStyle({
-     *     labelStyle : '(${Temperature} > 90) ? ' + LabelStyle.FILL_AND_OUTLINE + ' : ' + LabelStyle.FILL
+     *     labelStyle : `(\${Temperature} > 90) ? ${LabelStyle.FILL_AND_OUTLINE} : ${LabelStyle.FILL}`
      * });
      * style.labelStyle.evaluate(feature); // returns a LabelStyle
      * @example
@@ -28210,6 +28425,8 @@ export class Cesium3DTileStyle {
  * @param options.url - The url to a tileset JSON file.
  * @param [options.show = true] - Determines if the tileset will be shown.
  * @param [options.modelMatrix = Matrix4.IDENTITY] - A 4x4 transformation matrix that transforms the tileset's root tile.
+ * @param [options.modelUpAxis = Axis.Y] - Which axis is considered up when loading models for tile contents.
+ * @param [options.modelForwardAxis = Axis.X] - Which axis is considered forward when loading models for tile contents.
  * @param [options.shadows = ShadowMode.ENABLED] - Determines whether the tileset casts or receives shadows from light sources.
  * @param [options.maximumScreenSpaceError = 16] - The maximum screen space error used to drive level of detail refinement.
  * @param [options.maximumMemoryUsage = 512] - The maximum amount of memory in MB that can be used by the tileset.
@@ -28241,10 +28458,6 @@ export class Cesium3DTileStyle {
  * @param [options.pointCloudShading] - Options for constructing a {@link PointCloudShading} object to control point attenuation based on geometric error and lighting.
  * @param [options.lightColor] - The light color when shading models. When <code>undefined</code> the scene's light color is used instead.
  * @param [options.imageBasedLighting] - The properties for managing image-based lighting for this tileset.
- * @param [options.imageBasedLightingFactor = new Cartesian2(1.0, 1.0)] - Scales the diffuse and specular image-based lighting from the earth, sky, atmosphere and star skybox. Deprecated in Cesium 1.92, will be removed in Cesium 1.94.
- * @param [options.luminanceAtZenith = 0.2] - The sun's luminance at the zenith in kilo candela per meter squared to use for this model's procedural environment map. Deprecated in Cesium 1.92, will be removed in Cesium 1.94.
- * @param [options.sphericalHarmonicCoefficients] - The third order spherical harmonic coefficients used for the diffuse color of image-based lighting. Deprecated in Cesium 1.92, will be removed in Cesium 1.94.
- * @param [options.specularEnvironmentMaps] - A URL to a KTX2 file that contains a cube map of the specular lighting and the convoluted specular mipmaps. Deprecated in Cesium 1.92, will be removed in Cesium 1.94.
  * @param [options.backFaceCulling = true] - Whether to cull back-facing geometry. When true, back face culling is determined by the glTF material's doubleSided property; when false, back face culling is disabled.
  * @param [options.showOutline = true] - Whether to display the outline for models using the {@link https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Vendor/CESIUM_primitive_outline|CESIUM_primitive_outline} extension. When true, outlines are displayed. When false, outlines are not displayed.
  * @param [options.vectorClassificationOnly = false] - Indicates that only the tileset's vector tiles should be used for classification.
@@ -28253,9 +28466,11 @@ export class Cesium3DTileStyle {
  * @param [options.instanceFeatureIdLabel = "instanceFeatureId_0"] - Label of the instance feature ID set used for picking and styling. If instanceFeatureIdLabel is set to an integer N, it is converted to the string "instanceFeatureId_N" automatically. If both per-primitive and per-instance feature IDs are present, the instance feature IDs take priority.
  * @param [options.showCreditsOnScreen = false] - Whether to display the credits of this tileset on screen.
  * @param [options.splitDirection = SplitDirection.NONE] - The {@link SplitDirection} split to apply to this tileset.
+ * @param [options.projectTo2D = false] - Whether to accurately project the tileset to 2D. If this is true, the tileset will be projected accurately to 2D, but it will use more memory to do so. If this is false, the tileset will use less memory and will still render in 2D / CV mode, but its projected positions may be inaccurate. This cannot be set after the tileset has loaded.
  * @param [options.debugHeatmapTilePropertyName] - The tile variable to colorize as a heatmap. All rendered tiles will be colorized relative to each other's specified variable value.
  * @param [options.debugFreezeFrame = false] - For debugging only. Determines if only the tiles from last frame should be used for rendering.
  * @param [options.debugColorizeTiles = false] - For debugging only. When true, assigns a random color to each tile.
+ * @param [options.enableDebugWireframe] - For debugging only. This must be true for debugWireframe to work for ModelExperimental in WebGL1. This cannot be set after the tileset has loaded.
  * @param [options.debugWireframe = false] - For debugging only. When true, render's each tile's content as a wireframe.
  * @param [options.debugShowBoundingVolume = false] - For debugging only. When true, renders the bounding volume for each tile.
  * @param [options.debugShowContentBoundingVolume = false] - For debugging only. When true, renders the bounding volume for each tile's content.
@@ -28270,6 +28485,8 @@ export class Cesium3DTileset {
         url: Resource | string | Promise<Resource> | Promise<string>;
         show?: boolean;
         modelMatrix?: Matrix4;
+        modelUpAxis?: Axis;
+        modelForwardAxis?: Axis;
         shadows?: ShadowMode;
         maximumScreenSpaceError?: number;
         maximumMemoryUsage?: number;
@@ -28301,10 +28518,6 @@ export class Cesium3DTileset {
         pointCloudShading?: any;
         lightColor?: Cartesian3;
         imageBasedLighting?: ImageBasedLighting;
-        imageBasedLightingFactor?: Cartesian2;
-        luminanceAtZenith?: number;
-        sphericalHarmonicCoefficients?: Cartesian3[];
-        specularEnvironmentMaps?: string;
         backFaceCulling?: boolean;
         showOutline?: boolean;
         vectorClassificationOnly?: boolean;
@@ -28313,9 +28526,11 @@ export class Cesium3DTileset {
         instanceFeatureIdLabel?: string | number;
         showCreditsOnScreen?: boolean;
         splitDirection?: SplitDirection;
+        projectTo2D?: boolean;
         debugHeatmapTilePropertyName?: string;
         debugFreezeFrame?: boolean;
         debugColorizeTiles?: boolean;
+        enableDebugWireframe?: boolean;
         debugWireframe?: boolean;
         debugShowBoundingVolume?: boolean;
         debugShowContentBoundingVolume?: boolean;
@@ -28448,7 +28663,7 @@ export class Cesium3DTileset {
      *         return;
      *     }
      *
-     *     console.log('Loading: requests: ' + numberOfPendingRequests + ', processing: ' + numberOfTilesProcessing);
+     *     console.log(`Loading: requests: ${numberOfPendingRequests}, processing: ${numberOfTilesProcessing}`);
      * });
      */
     loadProgress: Event;
@@ -28524,8 +28739,8 @@ export class Cesium3DTileset {
      * </p>
      * @example
      * tileset.tileFailed.addEventListener(function(error) {
-     *     console.log('An error occurred loading tile: ' + error.url);
-     *     console.log('Error: ' + error.message);
+     *     console.log(`An error occurred loading tile: ${error.url}`);
+     *     console.log(`Error: ${error.message}`);
      * });
      */
     tileFailed: Event;
@@ -28613,8 +28828,9 @@ export class Cesium3DTileset {
     /**
      * The light color when shading models. When <code>undefined</code> the scene's light color is used instead.
      * <p>
-     * For example, disabling additional light sources by setting <code>model.imageBasedLighting.imageBasedLightingFactor = new Cartesian2(0.0, 0.0)</code> will make the
-     * model much darker. Here, increasing the intensity of the light source will make the model brighter.
+     * For example, disabling additional light sources by setting
+     * <code>tileset.imageBasedLighting.imageBasedLightingFactor = new Cartesian2(0.0, 0.0)</code>
+     * will make the tileset much darker. Here, increasing the intensity of the light source will make the tileset brighter.
      * </p>
      */
     lightColor: Cartesian3;
@@ -28737,8 +28953,8 @@ export class Cesium3DTileset {
      * in the 3D Tiles spec for the full set of properties.
      * </p>
      * @example
-     * console.log('Maximum building height: ' + tileset.properties.height.maximum);
-     * console.log('Minimum building height: ' + tileset.properties.height.minimum);
+     * console.log(`Maximum building height: ${tileset.properties.height.maximum}`);
+     * console.log(`Minimum building height: ${tileset.properties.height.minimum}`);
      */
     readonly properties: any;
     /**
@@ -28896,8 +29112,7 @@ export class Cesium3DTileset {
     readonly timeSinceLoad: number;
     /**
      * The total amount of GPU memory in bytes used by the tileset. This value is estimated from
-     * geometry, texture, and batch table textures of loaded tiles. For point clouds, this value also
-     * includes per-point metadata.
+     * geometry, texture, batch table textures, and binary metadata of loaded tiles.
      */
     readonly totalMemoryUsageInBytes: number;
     /**
@@ -28944,33 +29159,6 @@ export class Cesium3DTileset {
      * The properties for managing image-based lighting on this tileset.
      */
     imageBasedLighting: ImageBasedLighting;
-    /**
-     * Cesium adds lighting from the earth, sky, atmosphere, and star skybox. This cartesian is used to scale the final
-     * diffuse and specular lighting contribution from those sources to the final color. A value of 0.0 will disable those light sources.
-     */
-    imageBasedLightingFactor: Cartesian2;
-    /**
-     * The sun's luminance at the zenith in kilo candela per meter squared to use for this model's procedural environment map.
-     * This is used when {@link Cesium3DTileset#specularEnvironmentMaps} and {@link Cesium3DTileset#sphericalHarmonicCoefficients} are not defined.
-     */
-    luminanceAtZenith: number;
-    /**
-     * The third order spherical harmonic coefficients used for the diffuse color of image-based lighting. When <code>undefined</code>, a diffuse irradiance
-     * computed from the atmosphere color is used.
-     * <p>
-     * There are nine <code>Cartesian3</code> coefficients.
-     * The order of the coefficients is: L<sub>0,0</sub>, L<sub>1,-1</sub>, L<sub>1,0</sub>, L<sub>1,1</sub>, L<sub>2,-2</sub>, L<sub>2,-1</sub>, L<sub>2,0</sub>, L<sub>2,1</sub>, L<sub>2,2</sub>
-     * </p>
-     *
-     * These values can be obtained by preprocessing the environment map using the <code>cmgen</code> tool of
-     * {@link https://github.com/google/filament/releases|Google's Filament project}. This will also generate a KTX file that can be
-     * supplied to {@link Cesium3DTileset#specularEnvironmentMaps}.
-     */
-    sphericalHarmonicCoefficients: Cartesian3[];
-    /**
-     * A URL to a KTX file that contains a cube map of the specular lighting and the convoluted specular mipmaps.
-     */
-    specularEnvironmentMaps: string;
     /**
      * Indicates that only the tileset's vector tiles should be used for classification.
      */
@@ -30713,6 +30901,33 @@ export class Globe {
      */
     showGroundAtmosphere: boolean;
     /**
+     * The intensity of the light that is used for computing the ground atmosphere color.
+     */
+    atmosphereLightIntensity: number;
+    /**
+     * The Rayleigh scattering coefficient used in the atmospheric scattering equations for the ground atmosphere.
+     */
+    atmosphereRayleighCoefficient: Cartesian3;
+    /**
+     * The Mie scattering coefficient used in the atmospheric scattering equations for the ground atmosphere.
+     */
+    atmosphereMieCoefficient: Cartesian3;
+    /**
+     * The Rayleigh scale height used in the atmospheric scattering equations for the ground atmosphere, in meters.
+     */
+    atmosphereRayleighScaleHeight: number;
+    /**
+     * The Mie scale height used in the atmospheric scattering equations for the ground atmosphere, in meters.
+     */
+    atmosphereMieScaleHeight: number;
+    /**
+     * The anisotropy of the medium to consider for Mie scattering.
+     * <p>
+     * Valid values are between -1.0 and 1.0.
+     * </p>
+     */
+    atmosphereMieAnisotropy: number;
+    /**
      * The distance where everything becomes lit. This only takes effect
      * when <code>enableLighting</code> or <code>showGroundAtmosphere</code> is <code>true</code>.
      */
@@ -30844,7 +31059,7 @@ export class Globe {
      * Gets or sets the material appearance of the Globe.  This can be one of several built-in {@link Material} objects or a custom material, scripted with
      * {@link https://github.com/CesiumGS/cesium/wiki/Fabric|Fabric}.
      */
-    material: Material;
+    material: Material | undefined;
     /**
      * The color to render the back side of the globe when the camera is underground or the globe is translucent,
      * blended with the globe color based on the camera's distance.
@@ -31022,7 +31237,7 @@ export namespace GoogleEarthEnterpriseImageryProvider {
  * Notes: This provider is for use with the 3D Earth API of Google Earth Enterprise,
  *        {@link GoogleEarthEnterpriseMapsProvider} should be used with 2D Maps API.
  * @example
- * const geeMetadata = new GoogleEarthEnterpriseMetadata('http://www.earthenterprise.org/3d');
+ * const geeMetadata = new GoogleEarthEnterpriseMetadata('http://www.example.com');
  * const gee = new Cesium.GoogleEarthEnterpriseImageryProvider({
  *     metadata : geeMetadata
  * });
@@ -31164,11 +31379,9 @@ export class GoogleEarthEnterpriseImageryProvider {
      * @param level - The tile level.
      * @param [request] - The request object. Intended for internal use only.
      * @returns A promise for the image that will resolve when the image is available, or
-     *          undefined if there are too many active requests to the server, and the request
-     *          should be retried later.  The resolved image may be either an
-     *          Image or a Canvas DOM object.
+     *          undefined if there are too many active requests to the server, and the request should be retried later.
      */
-    requestImage(x: number, y: number, level: number, request?: Request): Promise<HTMLImageElement | HTMLCanvasElement> | undefined;
+    requestImage(x: number, y: number, level: number, request?: Request): Promise<ImageryTypes> | undefined;
     /**
      * Picking features is not currently supported by this imagery provider, so this function simply returns
      * undefined.
@@ -31177,12 +31390,9 @@ export class GoogleEarthEnterpriseImageryProvider {
      * @param level - The tile level.
      * @param longitude - The longitude at which to pick features.
      * @param latitude - The latitude at which to pick features.
-     * @returns A promise for the picked features that will resolve when the asynchronous
-     *                   picking completes.  The resolved value is an array of {@link ImageryLayerFeatureInfo}
-     *                   instances.  The array may be empty if no features are found at the given location.
-     *                   It may also be undefined if picking is not supported.
+     * @returns Undefined since picking is not supported.
      */
-    pickFeatures(x: number, y: number, level: number, longitude: number, latitude: number): Promise<ImageryLayerFeatureInfo[]> | undefined;
+    pickFeatures(x: number, y: number, level: number, longitude: number, latitude: number): undefined;
 }
 
 export namespace GoogleEarthEnterpriseMapsProvider {
@@ -31400,11 +31610,9 @@ export class GoogleEarthEnterpriseMapsProvider {
      * @param level - The tile level.
      * @param [request] - The request object. Intended for internal use only.
      * @returns A promise for the image that will resolve when the image is available, or
-     *          undefined if there are too many active requests to the server, and the request
-     *          should be retried later.  The resolved image may be either an
-     *          Image or a Canvas DOM object.
+     *          undefined if there are too many active requests to the server, and the request should be retried later.
      */
-    requestImage(x: number, y: number, level: number, request?: Request): Promise<HTMLImageElement | HTMLCanvasElement> | undefined;
+    requestImage(x: number, y: number, level: number, request?: Request): Promise<ImageryTypes> | undefined;
     /**
      * Picking features is not currently supported by this imagery provider, so this function simply returns
      * undefined.
@@ -31413,12 +31621,9 @@ export class GoogleEarthEnterpriseMapsProvider {
      * @param level - The tile level.
      * @param longitude - The longitude at which to pick features.
      * @param latitude - The latitude at which to pick features.
-     * @returns A promise for the picked features that will resolve when the asynchronous
-     *                   picking completes.  The resolved value is an array of {@link ImageryLayerFeatureInfo}
-     *                   instances.  The array may be empty if no features are found at the given location.
-     *                   It may also be undefined if picking is not supported.
+     * @returns Undefined since picking is not supported.
      */
-    pickFeatures(x: number, y: number, level: number, longitude: number, latitude: number): Promise<ImageryLayerFeatureInfo[]> | undefined;
+    pickFeatures(x: number, y: number, level: number, longitude: number, latitude: number): undefined;
     /**
      * Gets or sets the URL to the Google Earth logo for display in the credit.
      */
@@ -31599,12 +31804,9 @@ export class GridImageryProvider {
      * @param y - The tile Y coordinate.
      * @param level - The tile level.
      * @param [request] - The request object. Intended for internal use only.
-     * @returns A promise for the image that will resolve when the image is available, or
-     *          undefined if there are too many active requests to the server, and the request
-     *          should be retried later.  The resolved image may be either an
-     *          Image or a Canvas DOM object.
+     * @returns The resolved image as a Canvas DOM object.
      */
-    requestImage(x: number, y: number, level: number, request?: Request): Promise<HTMLImageElement | HTMLCanvasElement> | undefined;
+    requestImage(x: number, y: number, level: number, request?: Request): Promise<HTMLCanvasElement>;
     /**
      * Picking features is not currently supported by this imagery provider, so this function simply returns
      * undefined.
@@ -31613,12 +31815,9 @@ export class GridImageryProvider {
      * @param level - The tile level.
      * @param longitude - The longitude at which to pick features.
      * @param latitude - The latitude at which to pick features.
-     * @returns A promise for the picked features that will resolve when the asynchronous
-     *                   picking completes.  The resolved value is an array of {@link ImageryLayerFeatureInfo}
-     *                   instances.  The array may be empty if no features are found at the given location.
-     *                   It may also be undefined if picking is not supported.
+     * @returns Undefined since picking is not supported.
      */
-    pickFeatures(x: number, y: number, level: number, longitude: number, latitude: number): Promise<ImageryLayerFeatureInfo[]> | undefined;
+    pickFeatures(x: number, y: number, level: number, longitude: number, latitude: number): undefined;
 }
 
 /**
@@ -32533,9 +32732,9 @@ export class ImageryLayerCollection {
      * } else {
      *     Promise.resolve(featuresPromise).then(function(features) {
      *         // This function is called asynchronously when the list if picked features is available.
-     *         console.log('Number of features: ' + features.length);
+     *         console.log(`Number of features: ${features.length}`);
      *         if (features.length > 0) {
-     *             console.log('First feature name: ' + features[0].name);
+     *             console.log(`First feature name: ${features[0].name}`);
      *         }
      *     });
      * }
@@ -32611,6 +32810,16 @@ export class ImageryLayerFeatureInfo {
      */
     configureDescriptionFromProperties(properties: any): void;
 }
+
+/**
+ * The format in which {@link ImageryProvider} methods return an image may
+ * vary by provider, configuration, or server settings.  Most common are
+ * <code>HTMLImageElement</code>, <code>HTMLCanvasElement</code>, or on supported
+ * browsers, <code>ImageBitmap</code>.
+ *
+ * See the documentation for each ImageryProvider class for more information about how they return images.
+ */
+export type ImageryTypes = HTMLImageElement | HTMLCanvasElement | ImageBitmap;
 
 /**
  * Provides imagery to be displayed on the surface of an ellipsoid.  This type describes an
@@ -32752,12 +32961,10 @@ export class ImageryProvider {
      * @param y - The tile Y coordinate.
      * @param level - The tile level.
      * @param [request] - The request object. Intended for internal use only.
-     * @returns A promise for the image that will resolve when the image is available, or
-     *          undefined if there are too many active requests to the server, and the request
-     *          should be retried later.  The resolved image may be either an
-     *          Image or a Canvas DOM object.
+     * @returns Returns a promise for the image that will resolve when the image is available, or
+     *          undefined if there are too many active requests to the server, and the request should be retried later.
      */
-    requestImage(x: number, y: number, level: number, request?: Request): Promise<HTMLImageElement | HTMLCanvasElement> | undefined;
+    requestImage(x: number, y: number, level: number, request?: Request): Promise<ImageryTypes> | undefined;
     /**
      * Asynchronously determines what features, if any, are located at a given longitude and latitude within
      * a tile.  This function should not be called before {@link ImageryProvider#ready} returns true.
@@ -32780,17 +32987,9 @@ export class ImageryProvider {
      * @param imageryProvider - The imagery provider for the URL.
      * @param url - The URL of the image.
      * @returns A promise for the image that will resolve when the image is available, or
-     *          undefined if there are too many active requests to the server, and the request
-     *          should be retried later.  The resolved image may be either an
-     *          Image or a Canvas DOM object.
+     *          undefined if there are too many active requests to the server, and the request should be retried later.
      */
-    static loadImage(imageryProvider: ImageryProvider, url: Resource | string): Promise<HTMLImageElement | HTMLCanvasElement> | undefined;
-}
-
-/**
- * This enumeration is deprecated. Use {@link SplitPosition} instead.
- */
-export enum ImagerySplitDirection {
+    static loadImage(imageryProvider: ImageryProvider, url: Resource | string): Promise<ImageryTypes | CompressedTextureBuffer> | undefined;
 }
 
 export namespace IonImageryProvider {
@@ -32950,11 +33149,9 @@ export class IonImageryProvider {
      * @param level - The tile level.
      * @param [request] - The request object. Intended for internal use only.
      * @returns A promise for the image that will resolve when the image is available, or
-     *          undefined if there are too many active requests to the server, and the request
-     *          should be retried later.  The resolved image may be either an
-     *          Image or a Canvas DOM object.
+     *          undefined if there are too many active requests to the server, and the request should be retried later.
      */
-    requestImage(x: number, y: number, level: number, request?: Request): Promise<HTMLImageElement | HTMLCanvasElement> | undefined;
+    requestImage(x: number, y: number, level: number, request?: Request): Promise<ImageryTypes> | undefined;
     /**
      * Asynchronously determines what features, if any, are located at a given longitude and latitude within
      * a tile.  This function should not be called before {@link IonImageryProvider#ready} returns true.
@@ -33668,11 +33865,9 @@ export class MapboxImageryProvider {
      * @param level - The tile level.
      * @param [request] - The request object. Intended for internal use only.
      * @returns A promise for the image that will resolve when the image is available, or
-     *          undefined if there are too many active requests to the server, and the request
-     *          should be retried later.  The resolved image may be either an
-     *          Image or a Canvas DOM object.
+     *          undefined if there are too many active requests to the server, and the request should be retried later.
      */
-    requestImage(x: number, y: number, level: number, request?: Request): Promise<HTMLImageElement | HTMLCanvasElement> | undefined;
+    requestImage(x: number, y: number, level: number, request?: Request): Promise<ImageryTypes> | undefined;
     /**
      * Asynchronously determines what features, if any, are located at a given longitude and latitude within
      * a tile.  This function should not be called before {@link MapboxImageryProvider#ready} returns true.
@@ -33873,11 +34068,9 @@ export class MapboxStyleImageryProvider {
      * @param level - The tile level.
      * @param [request] - The request object. Intended for internal use only.
      * @returns A promise for the image that will resolve when the image is available, or
-     *          undefined if there are too many active requests to the server, and the request
-     *          should be retried later.  The resolved image may be either an
-     *          Image or a Canvas DOM object.
+     *          undefined if there are too many active requests to the server, and the request should be retried later.
      */
-    requestImage(x: number, y: number, level: number, request?: Request): Promise<HTMLImageElement | HTMLCanvasElement> | undefined;
+    requestImage(x: number, y: number, level: number, request?: Request): Promise<ImageryTypes> | undefined;
     /**
      * Asynchronously determines what features, if any, are located at a given longitude and latitude within
      * a tile.  This function should not be called before {@link MapboxStyleImageryProvider#ready} returns true.
@@ -34507,13 +34700,9 @@ export namespace MaterialAppearance {
  * @param [options.silhouetteColor = Color.RED] - The silhouette color. If more than 256 models have silhouettes enabled, there is a small chance that overlapping models will have minor artifacts.
  * @param [options.silhouetteSize = 0.0] - The size of the silhouette in pixels.
  * @param [options.clippingPlanes] - The {@link ClippingPlaneCollection} used to selectively disable rendering the model.
- * @param [options.dequantizeInShader = true] - Determines if a {@link https://github.com/google/draco|Draco} encoded model is dequantized on the GPU. This decreases total memory usage for encoded models.
+ * @param [options.dequantizeInShader = true] - Determines if a {@link https://github.com/google/draco|Draco} encoded model is dequantized on the GPU. This decreases total memory usage for encoded models. Deprecated in CesiumJS 1.94, will be removed in CesiumJS 1.96.
  * @param [options.lightColor] - The light color when shading the model. When <code>undefined</code> the scene's light color is used instead.
  * @param [options.imageBasedLighting] - The properties for managing image-based lighting on this model.
- * @param [options.imageBasedLightingFactor = new Cartesian2(1.0, 1.0)] - Scales diffuse and specular image-based lighting from the earth, sky, atmosphere and star skybox. Deprecated in Cesium 1.92, will be removed in Cesium 1.94.
- * @param [options.luminanceAtZenith = 0.2] - The sun's luminance at the zenith in kilo candela per meter squared to use for this model's procedural environment map. Deprecated in Cesium 1.92, will be removed in Cesium 1.94.
- * @param [options.sphericalHarmonicCoefficients] - The third order spherical harmonic coefficients used for the diffuse color of image-based lighting. Deprecated in Cesium 1.92, will be removed in Cesium 1.94.
- * @param [options.specularEnvironmentMaps] - A URL to a KTX2 file that contains a cube map of the specular lighting and the convoluted specular mipmaps. Deprecated in Cesium 1.92, will be removed in Cesium 1.94.
  * @param [options.credit] - A credit for the data source, which is displayed on the canvas.
  * @param [options.showCreditsOnScreen = false] - Whether to display the credits of this model on screen.
  * @param [options.backFaceCulling = true] - Whether to cull back-facing geometry. When true, back face culling is determined by the material's doubleSided property; when false, back face culling is disabled. Back faces are not culled if {@link Model#color} is translucent or {@link Model#silhouetteSize} is greater than 0.0.
@@ -34549,10 +34738,6 @@ export class Model {
         dequantizeInShader?: boolean;
         lightColor?: Cartesian3;
         imageBasedLighting?: ImageBasedLighting;
-        imageBasedLightingFactor?: Cartesian2;
-        luminanceAtZenith?: number;
-        sphericalHarmonicCoefficients?: Cartesian3[];
-        specularEnvironmentMaps?: string;
         credit?: Credit | string;
         showCreditsOnScreen?: boolean;
         backFaceCulling?: boolean;
@@ -34737,8 +34922,9 @@ export class Model {
     /**
      * The light color when shading the model. When <code>undefined</code> the scene's light color is used instead.
      * <p>
-     * For example, disabling additional light sources by setting <code>model.imageBasedLightingFactor = new Cesium.Cartesian2(0.0, 0.0)</code> will make the
-     * model much darker. Here, increasing the intensity of the light source will make the model brighter.
+     * For example, disabling additional light sources by setting
+     * <code>model.imageBasedLighting.imageBasedLightingFactor = new Cesium.Cartesian2(0.0, 0.0)</code>
+     * will make the model much darker. Here, increasing the intensity of the light source will make the model brighter.
      * </p>
      */
     lightColor: Cartesian3;
@@ -34746,33 +34932,6 @@ export class Model {
      * The properties for managing image-based lighting on this model.
      */
     imageBasedLighting: ImageBasedLighting;
-    /**
-     * Cesium adds lighting from the earth, sky, atmosphere, and star skybox. This cartesian is used to scale the final
-     * diffuse and specular lighting contribution from those sources to the final color. A value of 0.0 will disable those light sources.
-     */
-    imageBasedLightingFactor: Cartesian2;
-    /**
-     * The sun's luminance at the zenith in kilo candela per meter squared to use for this model's procedural environment map.
-     * This is used when {@link Model#specularEnvironmentMaps} and {@link Model#sphericalHarmonicCoefficients} are not defined.
-     */
-    luminanceAtZenith: number;
-    /**
-     * The third order spherical harmonic coefficients used for the diffuse color of image-based lighting. When <code>undefined</code>, a diffuse irradiance
-     * computed from the atmosphere color is used.
-     * <p>
-     * There are nine <code>Cartesian3</code> coefficients.
-     * The order of the coefficients is: L<sub>0,0</sub>, L<sub>1,-1</sub>, L<sub>1,0</sub>, L<sub>1,1</sub>, L<sub>2,-2</sub>, L<sub>2,-1</sub>, L<sub>2,0</sub>, L<sub>2,1</sub>, L<sub>2,2</sub>
-     * </p>
-     *
-     * These values can be obtained by preprocessing the environment map using the <code>cmgen</code> tool of
-     * {@link https://github.com/google/filament/releases|Google's Filament project}. This will also generate a KTX file that can be
-     * supplied to {@link Model#specularEnvironmentMaps}.
-     */
-    sphericalHarmonicCoefficients: Cartesian3[];
-    /**
-     * A URL to a KTX2 file that contains a cube map of the specular lighting and the convoluted specular mipmaps.
-     */
-    specularEnvironmentMaps: string;
     /**
      * Gets the credit that will be displayed for the model
      */
@@ -34879,13 +35038,9 @@ export class Model {
      * @param [options.silhouetteColor = Color.RED] - The silhouette color. If more than 256 models have silhouettes enabled, there is a small chance that overlapping models will have minor artifacts.
      * @param [options.silhouetteSize = 0.0] - The size of the silhouette in pixels.
      * @param [options.clippingPlanes] - The {@link ClippingPlaneCollection} used to selectively disable rendering the model.
-     * @param [options.dequantizeInShader = true] - Determines if a {@link https://github.com/google/draco|Draco} encoded model is dequantized on the GPU. This decreases total memory usage for encoded models.
+     * @param [options.dequantizeInShader = true] - Determines if a {@link https://github.com/google/draco|Draco} encoded model is dequantized on the GPU. This decreases total memory usage for encoded models. Deprecated in CesiumJS 1.94, will be removed in CesiumJS 1.96.
      * @param [options.lightColor] - The light color when shading the model. When <code>undefined</code> the scene's light color is used instead.
      * @param [options.imageBasedLighting] - The properties for managing image-based lighting for this tileset.
-     * @param [options.imageBasedLightingFactor = new Cartesian2(1.0, 1.0)] - Scales diffuse and specular image-based lighting from the earth, sky, atmosphere and star skybox. Deprecated in Cesium 1.92, will be removed in Cesium 1.94.
-     * @param [options.luminanceAtZenith = 0.2] - The sun's luminance at the zenith in kilo candela per meter squared to use for this model's procedural environment map. Deprecated in Cesium 1.92, will be removed in Cesium 1.94.
-     * @param [options.sphericalHarmonicCoefficients] - The third order spherical harmonic coefficients used for the diffuse color of image-based lighting. Deprecated in Cesium 1.92, will be removed in Cesium 1.94.
-     * @param [options.specularEnvironmentMaps] - A URL to a KTX2 file that contains a cube map of the specular lighting and the convoluted specular mipmaps. Deprecated in Cesium 1.92, will be removed in Cesium 1.94.
      * @param [options.credit] - A credit for the model, which is displayed on the canvas.
      * @param [options.showCreditsOnScreen = false] - Whether to display the credits of this model on screen.
      * @param [options.backFaceCulling = true] - Whether to cull back-facing geometry. When true, back face culling is determined by the material's doubleSided property; when false, back face culling is disabled. Back faces are not culled if {@link Model#color} is translucent or {@link Model#silhouetteSize} is greater than 0.0.
@@ -34920,10 +35075,6 @@ export class Model {
         dequantizeInShader?: boolean;
         lightColor?: Cartesian3;
         imageBasedLighting?: ImageBasedLighting;
-        imageBasedLightingFactor?: Cartesian2;
-        luminanceAtZenith?: number;
-        sphericalHarmonicCoefficients?: Cartesian3[];
-        specularEnvironmentMaps?: string;
         credit?: Credit | string;
         showCreditsOnScreen?: boolean;
         backFaceCulling?: boolean;
@@ -35020,7 +35171,7 @@ export class ModelAnimation {
      * </p>
      * @example
      * animation.start.addEventListener(function(model, animation) {
-     *   console.log('Animation started: ' + animation.name);
+     *   console.log(`Animation started: ${animation.name}`);
      * });
      */
     start: Event;
@@ -35034,7 +35185,7 @@ export class ModelAnimation {
      * </p>
      * @example
      * animation.update.addEventListener(function(model, animation, time) {
-     *   console.log('Animation updated: ' + animation.name + '. glTF animation time: ' + time);
+     *   console.log(`Animation updated: ${animation.name}. glTF animation time: ${time}`);
      * });
      */
     update: Event;
@@ -35046,7 +35197,7 @@ export class ModelAnimation {
      * </p>
      * @example
      * animation.stop.addEventListener(function(model, animation) {
-     *   console.log('Animation stopped: ' + animation.name);
+     *   console.log(`Animation stopped: ${animation.name}`);
      * });
      */
     stop: Event;
@@ -35085,6 +35236,30 @@ export class ModelAnimation {
      * Determines if and how the animation is looped.
      */
     readonly loop: ModelAnimationLoop;
+    /**
+     * If this is defined, it will be used to compute the local animation time
+     * instead of the scene's time.
+     */
+    animationTime: ModelAnimation.AnimationTimeCallback;
+}
+
+export namespace ModelAnimation {
+    /**
+     * A function used to compute the local animation time for a ModelAnimation.
+     * @example
+     * // Use real time for model animation (assuming animateWhilePaused was set to true)
+     * function animationTime(duration) {
+     *     return Date.now() / 1000 / duration;
+     * }
+     * @example
+     * // Offset the phase of the animation, so it starts halfway through its cycle.
+     * function animationTime(duration, seconds) {
+     *     return seconds / duration + 0.5;
+     * }
+     * @param duration - The animation's original duration in seconds.
+     * @param seconds - The seconds since the animation started, in scene time.
+     */
+    type AnimationTimeCallback = (duration: number, seconds: number) => number;
 }
 
 /**
@@ -35097,7 +35272,7 @@ export class ModelAnimationCollection {
      * example, to keep a UI in sync.
      * @example
      * model.activeAnimations.animationAdded.addEventListener(function(model, animation) {
-     *   console.log('Animation added: ' + animation.name);
+     *   console.log(`Animation added: ${animation.name}`);
      * });
      */
     animationAdded: Event;
@@ -35106,10 +35281,17 @@ export class ModelAnimationCollection {
      * example, to keep a UI in sync.
      * @example
      * model.activeAnimations.animationRemoved.addEventListener(function(model, animation) {
-     *   console.log('Animation removed: ' + animation.name);
+     *   console.log(`Animation removed: ${animation.name}`);
      * });
      */
     animationRemoved: Event;
+    /**
+     * When true, the animation will play even when the scene time is paused. However,
+     * whether animation takes place will depend on the animationTime functions assigned
+     * to the model's animations. By default, this is based on scene time, so models using
+     * the default will not animate regardless of this setting.
+     */
+    animateWhilePaused: boolean;
     /**
      * The number of animations in the collection.
      */
@@ -35145,13 +35327,13 @@ export class ModelAnimationCollection {
      * });
      *
      * animation.start.addEventListener(function(model, animation) {
-     *   console.log('Animation started: ' + animation.name);
+     *   console.log(`Animation started: ${animation.name}`);
      * });
      * animation.update.addEventListener(function(model, animation, time) {
-     *   console.log('Animation updated: ' + animation.name + '. glTF animation time: ' + time);
+     *   console.log(`Animation updated:  ${animation.name}. glTF animation time: ${time}`);
      * });
      * animation.stop.addEventListener(function(model, animation) {
-     *   console.log('Animation stopped: ' + animation.name);
+     *   console.log(`Animation stopped: ${animation.name}`);
      * });
      * @param options - Object with the following properties:
      * @param [options.name] - The glTF animation name that identifies the animation. Must be defined if <code>options.index</code> is <code>undefined</code>.
@@ -35163,6 +35345,7 @@ export class ModelAnimationCollection {
      * @param [options.multiplier = 1.0] - Values greater than <code>1.0</code> increase the speed that the animation is played relative to the scene clock speed; values less than <code>1.0</code> decrease the speed.
      * @param [options.reverse = false] - When <code>true</code>, the animation is played in reverse.
      * @param [options.loop = ModelAnimationLoop.NONE] - Determines if and how the animation is looped.
+     * @param [options.animationTime] - If defined, computes the local animation time for this animation.
      * @returns The animation that was added to the collection.
      */
     add(options: {
@@ -35175,6 +35358,7 @@ export class ModelAnimationCollection {
         multiplier?: number;
         reverse?: boolean;
         loop?: ModelAnimationLoop;
+        animationTime?: ModelAnimation.AnimationTimeCallback;
     }): ModelAnimation;
     /**
      * Creates and adds an animation with the specified initial properties to the collection
@@ -35195,6 +35379,7 @@ export class ModelAnimationCollection {
      * @param [options.multiplier = 1.0] - Values greater than <code>1.0</code> increase the speed that the animations play relative to the scene clock speed; values less than <code>1.0</code> decrease the speed.
      * @param [options.reverse = false] - When <code>true</code>, the animations are played in reverse.
      * @param [options.loop = ModelAnimationLoop.NONE] - Determines if and how the animations are looped.
+     * @param [options.animationTime] - If defined, computes the local animation time for all of the animations.
      * @returns An array of {@link ModelAnimation} objects, one for each animation added to the collection.  If there are no glTF animations, the array is empty.
      */
     addAll(options?: {
@@ -35205,6 +35390,7 @@ export class ModelAnimationCollection {
         multiplier?: number;
         reverse?: boolean;
         loop?: ModelAnimationLoop;
+        animationTime?: ModelAnimation.AnimationTimeCallback;
     }): ModelAnimation[];
     /**
      * Removes an animation from the collection.
@@ -35455,58 +35641,80 @@ export enum LightingModel {
  * </p>
  * @param options - Object with the following properties:
  * @param options.resource - The Resource to the 3D model.
+ * @param [options.show = true] - Whether or not to render the model.
  * @param [options.modelMatrix = Matrix4.IDENTITY] - The 4x4 transformation matrix that transforms the model from model to world coordinates.
  * @param [options.scale = 1.0] - A uniform scale applied to this model.
  * @param [options.minimumPixelSize = 0.0] - The approximate minimum pixel size of the model regardless of zoom.
  * @param [options.maximumScale] - The maximum scale size of a model. An upper limit for minimumPixelSize.
+ * @param [options.id] - A user-defined object to return when the model is picked with {@link Scene#pick}.
+ * @param [options.allowPicking = true] - When <code>true</code>, each primitive is pickable with {@link Scene#pick}.
+ * @param [options.clampAnimations = true] - Determines if the model's animations should hold a pose over frames where no keyframes are specified.
+ * @param [options.shadows = ShadowMode.ENABLED] - Determines whether the model casts or receives shadows from light sources.
  * @param [options.debugShowBoundingVolume = false] - For debugging only. Draws the bounding sphere for each draw command in the model.
+ * @param [options.enableDebugWireframe = false] - For debugging only. This must be set to true for debugWireframe to work in WebGL1. This cannot be set after the model has loaded.
+ * @param [options.debugWireframe = false] - For debugging only. Draws the model in wireframe. Will only work for WebGL1 if enableDebugWireframe is set to true.
  * @param [options.cull = true] - Whether or not to cull the model using frustum/horizon culling. If the model is part of a 3D Tiles tileset, this property will always be false, since the 3D Tiles culling system is used.
  * @param [options.opaquePass = Pass.OPAQUE] - The pass to use in the {@link DrawCommand} for the opaque portions of the model.
- * @param [options.allowPicking = true] - When <code>true</code>, each primitive is pickable with {@link Scene#pick}.
  * @param [options.customShader] - A custom shader. This will add user-defined GLSL code to the vertex and fragment shaders. Using custom shaders with a {@link Cesium3DTileStyle} may lead to undefined behavior.
  * @param [options.content] - The tile content this model belongs to. This property will be undefined if model is not loaded as part of a tileset.
- * @param [options.show = true] - Whether or not to render the model.
+ * @param [options.heightReference = HeightReference.NONE] - Determines how the model is drawn relative to terrain.
+ * @param [options.scene] - Must be passed in for models that use the height reference property.
+ * @param [options.distanceDisplayCondition] - The condition specifying at what distance from the camera that this model will be displayed.
  * @param [options.color] - A color that blends with the model's rendered color.
  * @param [options.colorBlendMode = ColorBlendMode.HIGHLIGHT] - Defines how the color blends with the model.
  * @param [options.colorBlendAmount = 0.5] - Value used to determine the color strength when the <code>colorBlendMode</code> is <code>MIX</code>. A value of 0.0 results in the model's rendered color while a value of 1.0 results in a solid color, with any value in-between resulting in a mix of the two.
- * @param [options.featureIdLabel = "featureId_0"] - Label of the feature ID set to use for picking and styling. For EXT_mesh_features, this is the feature ID's label property, or "featureId_N" (where N is the index in the featureIds array) when not specified. EXT_feature_metadata did not have a label field, so such feature ID sets are always labeled "featureId_N" where N is the index in the list of all feature Ids, where feature ID attributes are listed before feature ID textures. If featureIdLabel is an integer N, it is converted to the string "featureId_N" automatically. If both per-primitive and per-instance feature IDs are present, the instance feature IDs take priority.
- * @param [options.instanceFeatureIdLabel = "instanceFeatureId_0"] - Label of the instance feature ID set used for picking and styling. If instanceFeatureIdLabel is set to an integer N, it is converted to the string "instanceFeatureId_N" automatically. If both per-primitive and per-instance feature IDs are present, the instance feature IDs take priority.
- * @param [options.pointCloudShading] - Options for constructing a {@link PointCloudShading} object to control point attenuation based on geometric error and lighting.
+ * @param [options.silhouetteColor = Color.RED] - The silhouette color. If more than 256 models have silhouettes enabled, there is a small chance that overlapping models will have minor artifacts.
+ * @param [options.silhouetteSize = 0.0] - The size of the silhouette in pixels.
  * @param [options.clippingPlanes] - The {@link ClippingPlaneCollection} used to selectively disable rendering the model.
  * @param [options.lightColor] - The light color when shading the model. When <code>undefined</code> the scene's light color is used instead.
  * @param [options.imageBasedLighting] - The properties for managing image-based lighting on this model.
  * @param [options.backFaceCulling = true] - Whether to cull back-facing geometry. When true, back face culling is determined by the material's doubleSided property; when false, back face culling is disabled. Back faces are not culled if the model's color is translucent.
- * @param [options.shadows = ShadowMode.ENABLED] - Determines whether the model casts or receives shadows from light sources.
+ * @param [options.credit] - A credit for the data source, which is displayed on the canvas.
  * @param [options.showCreditsOnScreen = false] - Whether to display the credits of this model on screen.
  * @param [options.splitDirection = SplitDirection.NONE] - The {@link SplitDirection} split to apply to this model.
+ * @param [options.projectTo2D = false] - Whether to accurately project the model's positions in 2D. If this is true, the model will be projected accurately to 2D, but it will use more memory to do so. If this is false, the model will use less memory and will still render in 2D / CV mode, but its positions may be inaccurate. This disables minimumPixelSize and prevents future modification to the model matrix. This also cannot be set after the model has loaded.
+ * @param [options.featureIdLabel = "featureId_0"] - Label of the feature ID set to use for picking and styling. For EXT_mesh_features, this is the feature ID's label property, or "featureId_N" (where N is the index in the featureIds array) when not specified. EXT_feature_metadata did not have a label field, so such feature ID sets are always labeled "featureId_N" where N is the index in the list of all feature Ids, where feature ID attributes are listed before feature ID textures. If featureIdLabel is an integer N, it is converted to the string "featureId_N" automatically. If both per-primitive and per-instance feature IDs are present, the instance feature IDs take priority.
+ * @param [options.instanceFeatureIdLabel = "instanceFeatureId_0"] - Label of the instance feature ID set used for picking and styling. If instanceFeatureIdLabel is set to an integer N, it is converted to the string "instanceFeatureId_N" automatically. If both per-primitive and per-instance feature IDs are present, the instance feature IDs take priority.
+ * @param [options.pointCloudShading] - Options for constructing a {@link PointCloudShading} object to control point attenuation based on geometric error and lighting.
  */
 export class ModelExperimental {
     constructor(options: {
         resource: Resource;
+        show?: boolean;
         modelMatrix?: Matrix4;
         scale?: number;
         minimumPixelSize?: number;
         maximumScale?: number;
+        id?: any;
+        allowPicking?: boolean;
+        clampAnimations?: boolean;
+        shadows?: ShadowMode;
         debugShowBoundingVolume?: boolean;
+        enableDebugWireframe?: boolean;
+        debugWireframe?: boolean;
         cull?: boolean;
         opaquePass?: boolean;
-        allowPicking?: boolean;
         customShader?: CustomShader;
         content?: Cesium3DTileContent;
-        show?: boolean;
+        heightReference?: HeightReference;
+        scene?: Scene;
+        distanceDisplayCondition?: DistanceDisplayCondition;
         color?: Color;
         colorBlendMode?: ColorBlendMode;
         colorBlendAmount?: number;
-        featureIdLabel?: string | number;
-        instanceFeatureIdLabel?: string | number;
-        pointCloudShading?: any;
+        silhouetteColor?: Color;
+        silhouetteSize?: number;
         clippingPlanes?: ClippingPlaneCollection;
         lightColor?: Cartesian3;
         imageBasedLighting?: ImageBasedLighting;
         backFaceCulling?: boolean;
-        shadows?: ShadowMode;
+        credit?: Credit | string;
         showCreditsOnScreen?: boolean;
         splitDirection?: SplitDirection;
+        projectTo2D?: boolean;
+        featureIdLabel?: string | number;
+        instanceFeatureIdLabel?: string | number;
+        pointCloudShading?: any;
     });
     /**
      * When <code>true</code>, this model is ready to render, i.e., the external binary, image,
@@ -35523,6 +35731,14 @@ export class ModelExperimental {
      */
     readonly readyPromise: Promise<ModelExperimental>;
     /**
+     * The currently playing glTF animations.
+     */
+    readonly activeAnimations: ModelExperimentalAnimationCollection;
+    /**
+     * Determines if the model's animations should hold a pose over frames where no keyframes are specified.
+     */
+    clampAnimations: boolean;
+    /**
      * Point cloud shading settings for controlling point cloud attenuation
      * and lighting. For 3D Tiles, this is inherited from the
      * {@link Cesium3DTileset}.
@@ -35533,6 +35749,24 @@ export class ModelExperimental {
      * may lead to undefined behavior.
      */
     customShader: CustomShader;
+    /**
+     * The height reference of the model, which determines how the model is drawn
+     * relative to terrain.
+     */
+    heightReference: HeightReference;
+    /**
+     * Gets or sets the distance display condition, which specifies at what distance
+     * from the camera this model will be displayed.
+     */
+    distanceDisplayCondition: DistanceDisplayCondition;
+    /**
+     * A user-defined object that is returned when the model is picked.
+     */
+    id: any;
+    /**
+     * The style to apply the to the features in the model. Cannot be applied if a {@link CustomShader} is also applied.
+     */
+    style: Cesium3DTileStyle;
     /**
      * The color to blend with the model's rendered color.
      */
@@ -35546,7 +35780,17 @@ export class ModelExperimental {
      */
     colorBlendAmount: number;
     /**
-     * Gets the model's bounding sphere.
+     * The silhouette color.
+     */
+    silhouetteColor: Color;
+    /**
+     * The size of the silhouette in pixels.
+     */
+    silhouetteSize: number;
+    /**
+     * Gets the model's bounding sphere in world space. This does not take into account
+     * glTF animations, skins, or morph targets. It also does not account for
+     * {@link ModelExperimental#minimumPixelSize}.
      */
     readonly boundingSphere: BoundingSphere;
     /**
@@ -35556,6 +35800,13 @@ export class ModelExperimental {
      * </p>
      */
     debugShowBoundingVolume: boolean;
+    /**
+     * This property is for debugging only; it is not for production use nor is it optimized.
+     * <p>
+     * Draws the model in wireframe.
+     * </p>
+     */
+    debugWireframe: boolean;
     /**
      * Whether or not to render the model.
      */
@@ -35595,8 +35846,9 @@ export class ModelExperimental {
     /**
      * The light color when shading the model. When <code>undefined</code> the scene's light color is used instead.
      * <p>
-     * Disabling additional light sources by setting <code>model.imageBasedLightingFactor = new Cartesian2(0.0, 0.0)</code> will make the
-     * model much darker. Here, increasing the intensity of the light source will make the model brighter.
+     * Disabling additional light sources by setting
+     * <code>model.imageBasedLighting.imageBasedLightingFactor = new Cartesian2(0.0, 0.0)</code>
+     * will make the model much darker. Here, increasing the intensity of the light source will make the model brighter.
      * </p>
      */
     lightColor: Cartesian3;
@@ -35607,8 +35859,8 @@ export class ModelExperimental {
     /**
      * Whether to cull back-facing geometry. When true, back face culling is
      * determined by the material's doubleSided property; when false, back face
-     * culling is disabled. Back faces are not culled if the model's color is
-     * translucent.
+     * culling is disabled. Back faces are not culled if {@link ModelExperimental#color}
+     * is translucent or {@link ModelExperimental#silhouetteSize} is greater than 0.0.
      */
     backFaceCulling: boolean;
     /**
@@ -35634,6 +35886,10 @@ export class ModelExperimental {
      */
     shadows: ShadowMode;
     /**
+     * Gets the credit that will be displayed for the model
+     */
+    readonly credit: Credit;
+    /**
      * Gets or sets whether the credits of the model will be displayed on the screen
      */
     showCreditsOnScreen: boolean;
@@ -35641,6 +35897,23 @@ export class ModelExperimental {
      * The {@link SplitDirection} to apply to this model.
      */
     splitDirection: SplitDirection;
+    /**
+     * Sets the current value of an articulation stage.  After setting one or
+     * multiple stage values, call ModelExperimental.applyArticulations() to
+     * cause the node matrices to be recalculated.
+     * @example
+     * // Sets the value of the stage named "MoveX" belonging to the articulation named "SampleArticulation"
+     * model.setArticulationStage("SampleArticulation MoveX", 50.0);
+     * @param articulationStageKey - The name of the articulation, a space, and the name of the stage.
+     * @param value - The numeric value of this stage of the articulation.
+     */
+    setArticulationStage(articulationStageKey: string, value: number): void;
+    /**
+     * Applies any modified articulation stages to the matrix of each node that
+     * participates in any articulation. Note that this will overwrite any node
+     * transformations on participating nodes.
+     */
+    applyArticulations(): void;
     /**
      * Called when {@link Viewer} or {@link CesiumWidget} render the scene to
      * get the draw commands needed to render this primitive.
@@ -35677,69 +35950,93 @@ export class ModelExperimental {
      * <p>
      * The model can be a traditional glTF asset with a .gltf extension or a Binary glTF using the .glb extension.
      * @param options - Object with the following properties:
-     * @param options.gltf - A Resource/URL to a glTF/glb file, a binary glTF buffer, or a JSON object containing the glTF contents
+     * @param options.url - The url to the .gltf or .glb file.
      * @param [options.basePath = ''] - The base path that paths in the glTF JSON are relative to.
+     * @param [options.show = true] - Whether or not to render the model.
      * @param [options.modelMatrix = Matrix4.IDENTITY] - The 4x4 transformation matrix that transforms the model from model to world coordinates.
      * @param [options.scale = 1.0] - A uniform scale applied to this model.
      * @param [options.minimumPixelSize = 0.0] - The approximate minimum pixel size of the model regardless of zoom.
      * @param [options.maximumScale] - The maximum scale size of a model. An upper limit for minimumPixelSize.
+     * @param [options.id] - A user-defined object to return when the model is picked with {@link Scene#pick}.
+     * @param [options.allowPicking = true] - When <code>true</code>, each primitive is pickable with {@link Scene#pick}.
      * @param [options.incrementallyLoadTextures = true] - Determine if textures may continue to stream in after the model is loaded.
+     * @param [options.asynchronous = true] - Determines if model WebGL resource creation will be spread out over several frames or block until completion once all glTF files are loaded.
+     * @param [options.clampAnimations = true] - Determines if the model's animations should hold a pose over frames where no keyframes are specified.
+     * @param [options.shadows = ShadowMode.ENABLED] - Determines whether the model casts or receives shadows from light sources.
      * @param [options.releaseGltfJson = false] - When true, the glTF JSON is released once the glTF is loaded. This is is especially useful for cases like 3D Tiles, where each .gltf model is unique and caching the glTF JSON is not effective.
      * @param [options.debugShowBoundingVolume = false] - For debugging only. Draws the bounding sphere for each draw command in the model.
+     * @param [options.enableDebugWireframe = false] - For debugging only. This must be set to true for debugWireframe to work in WebGL1. This cannot be set after the model has loaded.
+     * @param [options.debugWireframe = false] - For debugging only. Draws the model in wireframe. Will only work for WebGL1 if enableDebugWireframe is set to true.
      * @param [options.cull = true] - Whether or not to cull the model using frustum/horizon culling. If the model is part of a 3D Tiles tileset, this property will always be false, since the 3D Tiles culling system is used.
      * @param [options.opaquePass = Pass.OPAQUE] - The pass to use in the {@link DrawCommand} for the opaque portions of the model.
      * @param [options.upAxis = Axis.Y] - The up-axis of the glTF model.
      * @param [options.forwardAxis = Axis.Z] - The forward-axis of the glTF model.
-     * @param [options.allowPicking = true] - When <code>true</code>, each primitive is pickable with {@link Scene#pick}.
      * @param [options.customShader] - A custom shader. This will add user-defined GLSL code to the vertex and fragment shaders. Using custom shaders with a {@link Cesium3DTileStyle} may lead to undefined behavior.
      * @param [options.content] - The tile content this model belongs to. This property will be undefined if model is not loaded as part of a tileset.
-     * @param [options.show = true] - Whether or not to render the model.
+     * @param [options.heightReference = HeightReference.NONE] - Determines how the model is drawn relative to terrain.
+     * @param [options.scene] - Must be passed in for models that use the height reference property.
+     * @param [options.distanceDisplayCondition] - The condition specifying at what distance from the camera that this model will be displayed.
      * @param [options.color] - A color that blends with the model's rendered color.
      * @param [options.colorBlendMode = ColorBlendMode.HIGHLIGHT] - Defines how the color blends with the model.
      * @param [options.colorBlendAmount = 0.5] - Value used to determine the color strength when the <code>colorBlendMode</code> is <code>MIX</code>. A value of 0.0 results in the model's rendered color while a value of 1.0 results in a solid color, with any value in-between resulting in a mix of the two.
-     * @param [options.featureIdLabel = "featureId_0"] - Label of the feature ID set to use for picking and styling. For EXT_mesh_features, this is the feature ID's label property, or "featureId_N" (where N is the index in the featureIds array) when not specified. EXT_feature_metadata did not have a label field, so such feature ID sets are always labeled "featureId_N" where N is the index in the list of all feature Ids, where feature ID attributes are listed before feature ID textures. If featureIdLabel is an integer N, it is converted to the string "featureId_N" automatically. If both per-primitive and per-instance feature IDs are present, the instance feature IDs take priority.
-     * @param [options.instanceFeatureIdLabel = "instanceFeatureId_0"] - Label of the instance feature ID set used for picking and styling. If instanceFeatureIdLabel is set to an integer N, it is converted to the string "instanceFeatureId_N" automatically. If both per-primitive and per-instance feature IDs are present, the instance feature IDs take priority.
-     * @param [options.pointCloudShading] - Options for constructing a {@link PointCloudShading} object to control point attenuation and lighting.
+     * @param [options.silhouetteColor = Color.RED] - The silhouette color. If more than 256 models have silhouettes enabled, there is a small chance that overlapping models will have minor artifacts.
+     * @param [options.silhouetteSize = 0.0] - The size of the silhouette in pixels.
      * @param [options.clippingPlanes] - The {@link ClippingPlaneCollection} used to selectively disable rendering the model.
      * @param [options.lightColor] - The light color when shading the model. When <code>undefined</code> the scene's light color is used instead.
      * @param [options.imageBasedLighting] - The properties for managing image-based lighting on this model.
      * @param [options.backFaceCulling = true] - Whether to cull back-facing geometry. When true, back face culling is determined by the material's doubleSided property; when false, back face culling is disabled. Back faces are not culled if the model's color is translucent.
-     * @param [options.shadows = ShadowMode.ENABLED] - Determines whether the model casts or receives shadows from light sources.
+     * @param [options.credit] - A credit for the data source, which is displayed on the canvas.
      * @param [options.showCreditsOnScreen = false] - Whether to display the credits of this model on screen.
      * @param [options.splitDirection = SplitDirection.NONE] - The {@link SplitDirection} split to apply to this model.
+     * @param [options.projectTo2D = false] - Whether to accurately project the model's positions in 2D. If this is true, the model will be projected accurately to 2D, but it will use more memory to do so. If this is false, the model will use less memory and will still render in 2D / CV mode, but its positions may be inaccurate. This disables minimumPixelSize and prevents future modification to the model matrix. This also cannot be set after the model has loaded.
+     * @param [options.featureIdLabel = "featureId_0"] - Label of the feature ID set to use for picking and styling. For EXT_mesh_features, this is the feature ID's label property, or "featureId_N" (where N is the index in the featureIds array) when not specified. EXT_feature_metadata did not have a label field, so such feature ID sets are always labeled "featureId_N" where N is the index in the list of all feature Ids, where feature ID attributes are listed before feature ID textures. If featureIdLabel is an integer N, it is converted to the string "featureId_N" automatically. If both per-primitive and per-instance feature IDs are present, the instance feature IDs take priority.
+     * @param [options.instanceFeatureIdLabel = "instanceFeatureId_0"] - Label of the instance feature ID set used for picking and styling. If instanceFeatureIdLabel is set to an integer N, it is converted to the string "instanceFeatureId_N" automatically. If both per-primitive and per-instance feature IDs are present, the instance feature IDs take priority.
+     * @param [options.pointCloudShading] - Options for constructing a {@link PointCloudShading} object to control point attenuation and lighting.
      * @returns The newly created model.
      */
     static fromGltf(options: {
-        gltf: string | Resource | Uint8Array | any;
+        url: string | Resource;
         basePath?: string | Resource;
+        show?: boolean;
         modelMatrix?: Matrix4;
         scale?: number;
         minimumPixelSize?: number;
         maximumScale?: number;
+        id?: any;
+        allowPicking?: boolean;
         incrementallyLoadTextures?: boolean;
+        asynchronous?: boolean;
+        clampAnimations?: boolean;
+        shadows?: ShadowMode;
         releaseGltfJson?: boolean;
         debugShowBoundingVolume?: boolean;
+        enableDebugWireframe?: boolean;
+        debugWireframe?: boolean;
         cull?: boolean;
         opaquePass?: boolean;
         upAxis?: Axis;
         forwardAxis?: Axis;
-        allowPicking?: boolean;
         customShader?: CustomShader;
         content?: Cesium3DTileContent;
-        show?: boolean;
+        heightReference?: HeightReference;
+        scene?: Scene;
+        distanceDisplayCondition?: DistanceDisplayCondition;
         color?: Color;
         colorBlendMode?: ColorBlendMode;
         colorBlendAmount?: number;
-        featureIdLabel?: string | number;
-        instanceFeatureIdLabel?: string | number;
-        pointCloudShading?: any;
+        silhouetteColor?: Color;
+        silhouetteSize?: number;
         clippingPlanes?: ClippingPlaneCollection;
         lightColor?: Cartesian3;
         imageBasedLighting?: ImageBasedLighting;
         backFaceCulling?: boolean;
-        shadows?: ShadowMode;
+        credit?: Credit | string;
         showCreditsOnScreen?: boolean;
         splitDirection?: SplitDirection;
+        projectTo2D?: boolean;
+        featureIdLabel?: string | number;
+        instanceFeatureIdLabel?: string | number;
+        pointCloudShading?: any;
     }): ModelExperimental;
 }
 
@@ -35755,19 +36052,310 @@ export class ModelExperimental {
 export var modelMatrix: Matrix4;
 
 /**
- * The style to apply the to the features in the model. Cannot be applied if a {@link CustomShader} is also applied.
+ * An active animation derived from a glTF asset. An active animation is an
+ * animation that is either currently playing or scheduled to be played due to
+ * being added to a model's {@link ModelExperimentalAnimationCollection}. An active animation
+ * is an instance of an animation; for example, there can be multiple active
+ * animations for the same glTF animation, each with a different start time.
+ * <p>
+ * Create this by calling {@link ModelExperimentalAnimationCollection#add}.
+ * </p>
  */
-export var style: Cesium3DTileStyle;
+export class ModelExperimentalAnimation {
+    constructor();
+    /**
+     * When <code>true</code>, the animation is removed after it stops playing.
+     * This is slightly more efficient that not removing it, but if, for example,
+     * time is reversed, the animation is not played again.
+     */
+    removeOnStop: boolean;
+    /**
+     * The event fired when this animation is started.  This can be used, for
+     * example, to play a sound or start a particle system, when the animation starts.
+     * <p>
+     * This event is fired at the end of the frame after the scene is rendered.
+     * </p>
+     * @example
+     * animation.start.addEventListener(function(model, animation) {
+     *   console.log(`Animation started: ${animation.name}`);
+     * });
+     */
+    start: Event;
+    /**
+     * The event fired when on each frame when this animation is updated.  The
+     * current time of the animation, relative to the glTF animation time span, is
+     * passed to the event, which allows, for example, starting new animations at a
+     * specific time relative to a playing animation.
+     * <p>
+     * This event is fired at the end of the frame after the scene is rendered.
+     * </p>
+     * @example
+     * animation.update.addEventListener(function(model, animation, time) {
+     *   console.log(`Animation updated: ${animation.name}. glTF animation time: ${time}`);
+     * });
+     */
+    update: Event;
+    /**
+     * The event fired when this animation is stopped.  This can be used, for
+     * example, to play a sound or start a particle system, when the animation stops.
+     * <p>
+     * This event is fired at the end of the frame after the scene is rendered.
+     * </p>
+     * @example
+     * animation.stop.addEventListener(function(model, animation) {
+     *   console.log(`Animation stopped: ${animation.name}`);
+     * });
+     */
+    stop: Event;
+    /**
+     * The name that identifies this animation in the model, if it exists.
+     */
+    readonly name: string;
+    /**
+     * The scene time to start playing this animation. When this is <code>undefined</code>,
+     * the animation starts at the next frame.
+     */
+    readonly startTime: JulianDate;
+    /**
+     * The delay, in seconds, from {@link ModelExperimentalAnimation#startTime} to start playing.
+     */
+    readonly delay: number;
+    /**
+     * The scene time to stop playing this animation. When this is <code>undefined</code>,
+     * the animation is played for its full duration and perhaps repeated depending on
+     * {@link ModelExperimentalAnimation#loop}.
+     */
+    readonly stopTime: JulianDate;
+    /**
+     * Values greater than <code>1.0</code> increase the speed that the animation is played relative
+     * to the scene clock speed; values less than <code>1.0</code> decrease the speed.  A value of
+     * <code>1.0</code> plays the animation at the speed in the glTF animation mapped to the scene
+     * clock speed.  For example, if the scene is played at 2x real-time, a two-second glTF animation
+     * will play in one second even if <code>multiplier</code> is <code>1.0</code>.
+     */
+    readonly multiplier: number;
+    /**
+     * When <code>true</code>, the animation is played in reverse.
+     */
+    readonly reverse: boolean;
+    /**
+     * Determines if and how the animation is looped.
+     */
+    readonly loop: ModelAnimationLoop;
+    /**
+     * If this is defined, it will be used to compute the local animation time
+     * instead of the scene's time.
+     */
+    animationTime: ModelExperimentalAnimation.AnimationTimeCallback;
+}
+
+export namespace ModelExperimentalAnimation {
+    /**
+     * A function used to compute the local animation time for a ModelExperimentalAnimation.
+     * @example
+     * // Use real time for model animation (assuming animateWhilePaused was set to true)
+     * function animationTime(duration) {
+     *     return Date.now() / 1000 / duration;
+     * }
+     * @example
+     * // Offset the phase of the animation, so it starts halfway through its cycle.
+     * function animationTime(duration, seconds) {
+     *     return seconds / duration + 0.5;
+     * }
+     * @param duration - The animation's original duration in seconds.
+     * @param seconds - The seconds since the animation started, in scene time.
+     */
+    type AnimationTimeCallback = (duration: number, seconds: number) => number;
+}
+
+/**
+ * A collection of active model animations. Access this using {@link ModelExperimental#activeAnimations}.
+ */
+export class ModelExperimentalAnimationCollection {
+    constructor();
+    /**
+     * The event fired when an animation is added to the collection.  This can be used, for
+     * example, to keep a UI in sync.
+     * @example
+     * model.activeAnimations.animationAdded.addEventListener(function(model, animation) {
+     *   console.log(`Animation added: ${animation.name}`);
+     * });
+     */
+    animationAdded: Event;
+    /**
+     * The event fired when an animation is removed from the collection.  This can be used, for
+     * example, to keep a UI in sync.
+     * @example
+     * model.activeAnimations.animationRemoved.addEventListener(function(model, animation) {
+     *   console.log(`Animation removed: ${animation.name}`);
+     * });
+     */
+    animationRemoved: Event;
+    /**
+     * When true, the animation will play even when the scene time is paused. However,
+     * whether animation takes place will depend on the animationTime functions assigned
+     * to the model's animations. By default, this is based on scene time, so models using
+     * the default will not animate regardless of this setting.
+     */
+    animateWhilePaused: boolean;
+    /**
+     * The number of animations in the collection.
+     */
+    readonly length: number;
+    /**
+     * The model that owns this animation collection.
+     */
+    readonly model: ModelExperimental;
+    /**
+     * Creates and adds an animation with the specified initial properties to the collection.
+     * <p>
+     * This raises the {@link ModelExperimentalAnimationCollection#animationAdded} event so, for example, a UI can stay in sync.
+     * </p>
+     * @example
+     * // Example 1. Add an animation by name
+     * model.activeAnimations.add({
+     *   name : 'animation name'
+     * });
+     * @example
+     * // Example 2. Add an animation by index
+     * model.activeAnimations.add({
+     *   index : 0
+     * });
+     * @example
+     * // Example 3. Add an animation and provide all properties and events
+     * const startTime = Cesium.JulianDate.now();
+     *
+     * const animation = model.activeAnimations.add({
+     *   name : 'another animation name',
+     *   startTime : startTime,
+     *   delay : 0.0,                                 // Play at startTime (default)
+     *   stopTime : Cesium.JulianDate.addSeconds(startTime, 4.0, new Cesium.JulianDate()),
+     *   removeOnStop : false,                        // Do not remove when animation stops (default)
+     *   multiplier : 2.0,                            // Play at double speed
+     *   reverse : true,                              // Play in reverse
+     *   loop : Cesium.ModelAnimationLoop.REPEAT      // Loop the animation
+     * });
+     *
+     * animation.start.addEventListener(function(model, animation) {
+     *   console.log(`Animation started: ${animation.name}`);
+     * });
+     * animation.update.addEventListener(function(model, animation, time) {
+     *   console.log(`Animation updated: ${animation.name}. glTF animation time: ${time}`);
+     * });
+     * animation.stop.addEventListener(function(model, animation) {
+     *   console.log(`Animation stopped: ${animation.name}`);
+     * });
+     * @param options - Object with the following properties:
+     * @param [options.name] - The glTF animation name that identifies the animation. Must be defined if <code>options.index</code> is <code>undefined</code>.
+     * @param [options.index] - The glTF animation index that identifies the animation. Must be defined if <code>options.name</code> is <code>undefined</code>.
+     * @param [options.startTime] - The scene time to start playing the animation.  When this is <code>undefined</code>, the animation starts at the next frame.
+     * @param [options.delay = 0.0] - The delay, in seconds, from <code>startTime</code> to start playing. This will only affect the animation if <code>options.loop</code> is ModelAnimationLoop.NONE.
+     * @param [options.stopTime] - The scene time to stop playing the animation.  When this is <code>undefined</code>, the animation is played for its full duration.
+     * @param [options.removeOnStop = false] - When <code>true</code>, the animation is removed after it stops playing. This will only affect the animation if <code>options.loop</code> is ModelAnimationLoop.NONE.
+     * @param [options.multiplier = 1.0] - Values greater than <code>1.0</code> increase the speed that the animation is played relative to the scene clock speed; values less than <code>1.0</code> decrease the speed.
+     * @param [options.reverse = false] - When <code>true</code>, the animation is played in reverse.
+     * @param [options.loop = ModelAnimationLoop.NONE] - Determines if and how the animation is looped.
+     * @param [options.animationTime] - If defined, computes the local animation time for this animation.
+     * @returns The animation that was added to the collection.
+     */
+    add(options: {
+        name?: string;
+        index?: number;
+        startTime?: JulianDate;
+        delay?: number;
+        stopTime?: JulianDate;
+        removeOnStop?: boolean;
+        multiplier?: number;
+        reverse?: boolean;
+        loop?: ModelAnimationLoop;
+        animationTime?: ModelExperimentalAnimation.AnimationTimeCallback;
+    }): ModelExperimentalAnimation;
+    /**
+     * Creates and adds animations with the specified initial properties to the collection
+     * for all animations in the model.
+     * <p>
+     * This raises the {@link ModelExperimentalAnimationCollection#animationAdded} event for each model so, for example, a UI can stay in sync.
+     * </p>
+     * @example
+     * model.activeAnimations.addAll({
+     *   multiplier : 0.5,                            // Play at half-speed
+     *   loop : Cesium.ModelAnimationLoop.REPEAT      // Loop the animations
+     * });
+     * @param [options] - Object with the following properties:
+     * @param [options.startTime] - The scene time to start playing the animations. When this is <code>undefined</code>, the animations starts at the next frame.
+     * @param [options.delay = 0.0] - The delay, in seconds, from <code>startTime</code> to start playing. This will only affect the animation if <code>options.loop</code> is ModelAnimationLoop.NONE.
+     * @param [options.stopTime] - The scene time to stop playing the animations. When this is <code>undefined</code>, the animations are played for its full duration.
+     * @param [options.removeOnStop = false] - When <code>true</code>, the animations are removed after they stop playing. This will only affect the animation if <code>options.loop</code> is ModelAnimationLoop.NONE.
+     * @param [options.multiplier = 1.0] - Values greater than <code>1.0</code> increase the speed that the animations play relative to the scene clock speed; values less than <code>1.0</code> decrease the speed.
+     * @param [options.reverse = false] - When <code>true</code>, the animations are played in reverse.
+     * @param [options.loop = ModelAnimationLoop.NONE] - Determines if and how the animations are looped.
+     * @param [options.animationTime] - If defined, computes the local animation time for all of the animations.
+     * @returns An array of {@link ModelExperimentalAnimation} objects, one for each animation added to the collection.  If there are no glTF animations, the array is empty.
+     */
+    addAll(options?: {
+        startTime?: JulianDate;
+        delay?: number;
+        stopTime?: JulianDate;
+        removeOnStop?: boolean;
+        multiplier?: number;
+        reverse?: boolean;
+        loop?: ModelAnimationLoop;
+        animationTime?: ModelExperimentalAnimation.AnimationTimeCallback;
+    }): ModelExperimentalAnimation[];
+    /**
+     * Removes an animation from the collection.
+     * <p>
+     * This raises the {@link ModelExperimentalAnimationCollection#animationRemoved} event so, for example, a UI can stay in sync.
+     * </p>
+     * <p>
+     * An animation can also be implicitly removed from the collection by setting {@link ModelExperimentalAnimationCollection#removeOnStop} to
+     * <code>true</code>.  The {@link ModelExperimentalAnimationCollection#animationRemoved} event is still fired when the animation is removed.
+     * </p>
+     * @example
+     * const a = model.activeAnimations.add({
+     *   name : 'animation name'
+     * });
+     * model.activeAnimations.remove(a); // Returns true
+     * @param runtimeAnimation - The runtime animation to remove.
+     * @returns <code>true</code> if the animation was removed; <code>false</code> if the animation was not found in the collection.
+     */
+    remove(runtimeAnimation: ModelExperimentalAnimation): boolean;
+    /**
+     * Removes all animations from the collection.
+     * <p>
+     * This raises the {@link ModelExperimentalAnimationCollection#animationRemoved} event for each
+     * animation so, for example, a UI can stay in sync.
+     * </p>
+     */
+    removeAll(): void;
+    /**
+     * Determines whether this collection contains a given animation.
+     * @param runtimeAnimation - The runtime animation to check for.
+     * @returns <code>true</code> if this collection contains the animation, <code>false</code> otherwise.
+     */
+    contains(runtimeAnimation: ModelExperimentalAnimation): boolean;
+    /**
+     * Returns the animation in the collection at the specified index.  Indices are zero-based
+     * and increase as animations are added.  Removing an animation shifts all animations after
+     * it to the left, changing their indices.  This function is commonly used to iterate over
+     * all the animations in the collection.
+     * @example
+     * // Output the names of all the animations in the collection.
+     * const animations = model.activeAnimations;
+     * const length = animations.length;
+     * for (let i = 0; i < length; ++i) {
+     *   console.log(animations.get(i).name);
+     * }
+     * @param index - The zero-based index of the animation.
+     * @returns The runtime animation at the specified index.
+     */
+    get(index: number): ModelExperimentalAnimation;
+}
 
 /**
  * The indices of the children of this node in the scene graph.
  */
 export const children: number[];
-
-/**
- * Update stages to apply to this primitive.
- */
-export var updateStages: any;
 
 /**
  * A feature of a {@link ModelExperimental}.
@@ -35824,11 +36412,11 @@ export class ModelFeature {
      * Returns a copy of the value of the feature's property with the given name.
      * @example
      * // Display all the properties for a feature in the console log.
-     * const propertyNames = feature.getPropertyNames();
-     * const length = propertyNames.length;
+     * const propertyIds = feature.getPropertyIds();
+     * const length = propertyIds.length;
      * for (let i = 0; i < length; ++i) {
-     *     const propertyName = propertyNames[i];
-     *     console.log(propertyName + ': ' + feature.getProperty(propertyName));
+     *     const propertyId = propertyIds[i];
+     *     console.log(propertyId + ': ' + feature.getProperty(propertyId));
      * }
      * @param name - The case-sensitive name of the property.
      * @returns The value of the property or <code>undefined</code> if the feature does not have this property.
@@ -35858,6 +36446,12 @@ export class ModelFeature {
      */
     getPropertyNames(results?: string[]): string[];
     /**
+     * Returns an array of property IDs for the feature.
+     * @param [results] - An array into which to store the results.
+     * @returns The IDs of the feature's properties.
+     */
+    getPropertyIds(results?: string[]): string[];
+    /**
      * Sets the value of the feature's property with the given name.
      * @example
      * const height = feature.getProperty('Height'); // e.g., the height of a building
@@ -35877,11 +36471,6 @@ export class ModelFeature {
 }
 
 /**
- * The bounding sphere that contains all the vertices in this primitive.
- */
-export var boundingSphere: BoundingSphere;
-
-/**
  * A simple struct that serves as a value of a <code>sampler2D</code>-valued
  * uniform. This is used with {@link CustomShader} and {@link TextureManager}
  * @param options - An object with the following properties:
@@ -35892,8 +36481,8 @@ export var boundingSphere: BoundingSphere;
  * @param [options.repeat = true] - When defined, the texture sampler will be set to wrap in both directions
  * @param [options.pixelFormat = PixelFormat.RGBA] - When options.typedArray is defined, this is used to determine the pixel format of the texture
  * @param [options.pixelDatatype = PixelDatatype.UNSIGNED_BYTE] - When options.typedArray is defined, this is the data type of pixel values in the typed array.
- * @param [textureMinificationFilter = TextureMinificationFilter.LINEAR] - The minification filter of the texture sampler.
- * @param [textureMagnificationFilter = TextureMagnificationFilter.LINEAR] - The magnification filter of the texture sampler.
+ * @param [options.minificationFilter = TextureMinificationFilter.LINEAR] - The minification filter of the texture sampler.
+ * @param [options.magnificationFilter = TextureMagnificationFilter.LINEAR] - The magnification filter of the texture sampler.
  * @param [options.maximumAnisotropy = 1.0] - The maximum anisotropy of the texture sampler
  */
 export class TextureUniform {
@@ -35905,8 +36494,10 @@ export class TextureUniform {
         repeat?: boolean;
         pixelFormat?: PixelFormat;
         pixelDatatype?: PixelDatatype;
+        minificationFilter?: TextureMinificationFilter;
+        magnificationFilter?: TextureMagnificationFilter;
         maximumAnisotropy?: number;
-    }, textureMinificationFilter?: TextureMinificationFilter, textureMagnificationFilter?: TextureMagnificationFilter);
+    });
 }
 
 /**
@@ -37467,15 +38058,15 @@ export class PolylineMaterialAppearance {
  * Runs a post-process stage on either the texture rendered by the scene or the output of a previous post-process stage.
  * @example
  * // Simple stage to change the color
- * const fs =
- *     'uniform sampler2D colorTexture;\n' +
- *     'varying vec2 v_textureCoordinates;\n' +
- *     'uniform float scale;\n' +
- *     'uniform vec3 offset;\n' +
- *     'void main() {\n' +
- *     '    vec4 color = texture2D(colorTexture, v_textureCoordinates);\n' +
- *     '    gl_FragColor = vec4(color.rgb * scale + offset, 1.0);\n' +
- *     '}\n';
+ * const fs =`
+ *     uniform sampler2D colorTexture;
+ *     varying vec2 v_textureCoordinates;
+ *     uniform float scale;
+ *     uniform vec3 offset;
+ *     void main() {
+ *         vec4 color = texture2D(colorTexture, v_textureCoordinates);
+ *         gl_FragColor = vec4(color.rgb * scale + offset, 1.0);
+ *     }`;
  * scene.postProcessStages.add(new Cesium.PostProcessStage({
  *     fragmentShader : fs,
  *     uniforms : {
@@ -37488,19 +38079,19 @@ export class PolylineMaterialAppearance {
  * @example
  * // Simple stage to change the color of what is selected.
  * // If czm_selected returns true, the current fragment belongs to geometry in the selected array.
- * const fs =
- *     'uniform sampler2D colorTexture;\n' +
- *     'varying vec2 v_textureCoordinates;\n' +
- *     'uniform vec4 highlight;\n' +
- *     'void main() {\n' +
- *     '    vec4 color = texture2D(colorTexture, v_textureCoordinates);\n' +
- *     '    if (czm_selected()) {\n' +
- *     '        vec3 highlighted = highlight.a * highlight.rgb + (1.0 - highlight.a) * color.rgb;\n' +
- *     '        gl_FragColor = vec4(highlighted, 1.0);\n' +
- *     '    } else { \n' +
- *     '        gl_FragColor = color;\n' +
- *     '    }\n' +
- *     '}\n';
+ * const fs =`
+ *     uniform sampler2D colorTexture;
+ *     varying vec2 v_textureCoordinates;
+ *     uniform vec4 highlight;
+ *     void main() {
+ *         vec4 color = texture2D(colorTexture, v_textureCoordinates);
+ *         if (czm_selected()) {
+ *             vec3 highlighted = highlight.a * highlight.rgb + (1.0 - highlight.a) * color.rgb;
+ *             gl_FragColor = vec4(highlighted, 1.0);
+ *         } else {
+ *             gl_FragColor = color;
+ *         }
+ *     }`;
  * const stage = scene.postProcessStages.add(new Cesium.PostProcessStage({
  *     fragmentShader : fs,
  *     uniforms : {
@@ -37613,7 +38204,7 @@ export class PostProcessStage {
      * if (czm_selected(v_textureCoordinates)) {
      *     // apply post-process stage
      * } else {
-     *     gl_FragColor = texture2D(colorTexture, v_textureCordinates);
+     *     gl_FragColor = texture2D(colorTexture, v_textureCoordinates);
      * }
      * </code>
      * </p>
@@ -38938,10 +39529,6 @@ export class Scene {
      */
     splitPosition: number;
     /**
-     * Gets or sets the position of the Imagery splitter within the viewport.  Valid values are between 0.0 and 1.0.
-     */
-    imagerySplitPosition: number;
-    /**
      * The distance from the camera at which to disable the depth test of billboards, labels and points
      * to, for example, prevent clipping against terrain. When set to zero, the depth test should always
      * be applied. When less than zero, the depth test should never be applied. Setting the disableDepthTestDistance
@@ -39651,12 +40238,9 @@ export class SingleTileImageryProvider {
      * @param y - The tile Y coordinate.
      * @param level - The tile level.
      * @param [request] - The request object. Intended for internal use only.
-     * @returns A promise for the image that will resolve when the image is available, or
-     *          undefined if there are too many active requests to the server, and the request
-     *          should be retried later.  The resolved image may be either an
-     *          Image or a Canvas DOM object.
+     * @returns The resolved image
      */
-    requestImage(x: number, y: number, level: number, request?: Request): Promise<HTMLImageElement | HTMLCanvasElement> | undefined;
+    requestImage(x: number, y: number, level: number, request?: Request): Promise<ImageryTypes> | undefined;
     /**
      * Picking features is not currently supported by this imagery provider, so this function simply returns
      * undefined.
@@ -39665,18 +40249,14 @@ export class SingleTileImageryProvider {
      * @param level - The tile level.
      * @param longitude - The longitude at which to pick features.
      * @param latitude - The latitude at which to pick features.
-     * @returns A promise for the picked features that will resolve when the asynchronous
-     *                   picking completes.  The resolved value is an array of {@link ImageryLayerFeatureInfo}
-     *                   instances.  The array may be empty if no features are found at the given location.
-     *                   It may also be undefined if picking is not supported.
+     * @returns Undefined since picking is not supported.
      */
-    pickFeatures(x: number, y: number, level: number, longitude: number, latitude: number): Promise<ImageryLayerFeatureInfo[]> | undefined;
+    pickFeatures(x: number, y: number, level: number, longitude: number, latitude: number): undefined;
 }
 
 /**
- * An atmosphere drawn around the limb of the provided ellipsoid.  Based on
- * {@link https://developer.nvidia.com/gpugems/GPUGems2/gpugems2_chapter16.html|Accurate Atmospheric Scattering}
- * in GPU Gems 2.
+ * An atmosphere drawn around the limb of the provided ellipsoid. Based on
+ * {@link http://nishitalab.org/user/nis/cdrom/sig93_nis.pdf|Display of The Earth Taking Into Account Atmospheric Scattering}.
  * <p>
  * This is only supported in 3D. Atmosphere is faded out when morphing to 2D or Columbus view.
  * </p>
@@ -39695,6 +40275,33 @@ export class SkyAtmosphere {
      * This produces better looking atmosphere with a slight performance penalty.
      */
     perFragmentAtmosphere: boolean;
+    /**
+     * The intensity of the light that is used for computing the sky atmosphere color.
+     */
+    atmosphereLightIntensity: number;
+    /**
+     * The Rayleigh scattering coefficient used in the atmospheric scattering equations for the sky atmosphere.
+     */
+    atmosphereRayleighCoefficient: Cartesian3;
+    /**
+     * The Mie scattering coefficient used in the atmospheric scattering equations for the sky atmosphere.
+     */
+    atmosphereMieCoefficient: Cartesian3;
+    /**
+     * The Rayleigh scale height used in the atmospheric scattering equations for the sky atmosphere, in meters.
+     */
+    atmosphereRayleighScaleHeight: number;
+    /**
+     * The Mie scale height used in the atmospheric scattering equations for the sky atmosphere, in meters.
+     */
+    atmosphereMieScaleHeight: number;
+    /**
+     * The anisotropy of the medium to consider for Mie scattering.
+     * <p>
+     * Valid values are between -1.0 and 1.0.
+     * </p>
+     */
+    atmosphereMieAnisotropy: number;
     /**
      * The hue shift to apply to the atmosphere. Defaults to 0.0 (no shift).
      * A hue shift of 1.0 indicates a complete rotation of the hues available.
@@ -40166,12 +40773,9 @@ export class TileCoordinatesImageryProvider {
      * @param y - The tile Y coordinate.
      * @param level - The tile level.
      * @param [request] - The request object. Intended for internal use only.
-     * @returns A promise for the image that will resolve when the image is available, or
-     *          undefined if there are too many active requests to the server, and the request
-     *          should be retried later.  The resolved image may be either an
-     *          Image or a Canvas DOM object.
+     * @returns The resolved image as a Canvas DOM object.
      */
-    requestImage(x: number, y: number, level: number, request?: Request): Promise<HTMLImageElement | HTMLCanvasElement> | undefined;
+    requestImage(x: number, y: number, level: number, request?: Request): Promise<HTMLCanvasElement>;
     /**
      * Picking features is not currently supported by this imagery provider, so this function simply returns
      * undefined.
@@ -40180,12 +40784,9 @@ export class TileCoordinatesImageryProvider {
      * @param level - The tile level.
      * @param longitude - The longitude at which to pick features.
      * @param latitude - The latitude at which to pick features.
-     * @returns A promise for the picked features that will resolve when the asynchronous
-     *                   picking completes.  The resolved value is an array of {@link ImageryLayerFeatureInfo}
-     *                   instances.  The array may be empty if no features are found at the given location.
-     *                   It may also be undefined if picking is not supported.
+     * @returns Undefined since picking is not supported.
      */
-    pickFeatures(x: number, y: number, level: number, longitude: number, latitude: number): Promise<ImageryLayerFeatureInfo[]> | undefined;
+    pickFeatures(x: number, y: number, level: number, longitude: number, latitude: number): undefined;
 }
 
 /**
@@ -40409,8 +41010,8 @@ export class TimeDynamicPointCloud {
      * </ul>
      * @example
      * pointCloud.frameFailed.addEventListener(function(error) {
-     *     console.log('An error occurred loading frame: ' + error.uri);
-     *     console.log('Error: ' + error.message);
+     *     console.log(`An error occurred loading frame: ${error.uri}`);
+     *     console.log(`Error: ${error.message}`);
      * });
      */
     frameFailed: Event;
@@ -40814,11 +41415,9 @@ export class UrlTemplateImageryProvider {
      * @param level - The tile level.
      * @param [request] - The request object. Intended for internal use only.
      * @returns A promise for the image that will resolve when the image is available, or
-     *          undefined if there are too many active requests to the server, and the request
-     *          should be retried later.  The resolved image may be either an
-     *          Image or a Canvas DOM object.
+     *          undefined if there are too many active requests to the server, and the request should be retried later.
      */
-    requestImage(x: number, y: number, level: number, request?: Request): Promise<HTMLImageElement | HTMLCanvasElement> | undefined;
+    requestImage(x: number, y: number, level: number, request?: Request): Promise<ImageryTypes> | undefined;
     /**
      * Asynchronously determines what features, if any, are located at a given longitude and latitude within
      * a tile.  This function should not be called before {@link ImageryProvider#ready} returns true.
@@ -41173,11 +41772,9 @@ export class WebMapServiceImageryProvider {
      * @param level - The tile level.
      * @param [request] - The request object. Intended for internal use only.
      * @returns A promise for the image that will resolve when the image is available, or
-     *          undefined if there are too many active requests to the server, and the request
-     *          should be retried later.  The resolved image may be either an
-     *          Image or a Canvas DOM object.
+     *          undefined if there are too many active requests to the server, and the request should be retried later.
      */
-    requestImage(x: number, y: number, level: number, request?: Request): Promise<HTMLImageElement | HTMLCanvasElement> | undefined;
+    requestImage(x: number, y: number, level: number, request?: Request): Promise<ImageryTypes> | undefined;
     /**
      * Asynchronously determines what features, if any, are located at a given longitude and latitude within
      * a tile.  This function should not be called before {@link ImageryProvider#ready} returns true.
@@ -41461,11 +42058,9 @@ export class WebMapTileServiceImageryProvider {
      * @param level - The tile level.
      * @param [request] - The request object. Intended for internal use only.
      * @returns A promise for the image that will resolve when the image is available, or
-     *          undefined if there are too many active requests to the server, and the request
-     *          should be retried later.  The resolved image may be either an
-     *          Image or a Canvas DOM object.
+     *          undefined if there are too many active requests to the server, and the request should be retried later.
      */
-    requestImage(x: number, y: number, level: number, request?: Request): Promise<HTMLImageElement | HTMLCanvasElement> | undefined;
+    requestImage(x: number, y: number, level: number, request?: Request): Promise<ImageryTypes> | undefined;
     /**
      * Picking features is not currently supported by this imagery provider, so this function simply returns
      * undefined.
@@ -41474,12 +42069,9 @@ export class WebMapTileServiceImageryProvider {
      * @param level - The tile level.
      * @param longitude - The longitude at which to pick features.
      * @param latitude - The latitude at which to pick features.
-     * @returns A promise for the picked features that will resolve when the asynchronous
-     *                   picking completes.  The resolved value is an array of {@link ImageryLayerFeatureInfo}
-     *                   instances.  The array may be empty if no features are found at the given location.
-     *                   It may also be undefined if picking is not supported.
+     * @returns Undefined since picking is not supported.
      */
-    pickFeatures(x: number, y: number, level: number, longitude: number, latitude: number): Promise<ImageryLayerFeatureInfo[]> | undefined;
+    pickFeatures(x: number, y: number, level: number, longitude: number, latitude: number): undefined;
 }
 
 /**
@@ -42054,6 +42646,11 @@ export class Cesium3DTilesInspectorViewModel {
      */
     showPickStatistics: boolean;
     /**
+     * Gets or sets the flag to show resource cache statistics. This property is
+     * observable.
+     */
+    showResourceCacheStatistics: boolean;
+    /**
      * Gets or sets the flag to show the inspector.  This property is observable.
      */
     inspectorVisible: boolean;
@@ -42242,6 +42839,10 @@ export class Cesium3DTilesInspectorViewModel {
      * Gets the pick statistics text.  This property is observable.
      */
     readonly pickStatisticsText: string;
+    /**
+     * Gets the resource cache statistics text. This property is observable.
+     */
+    readonly resourceCacheStatisticsText: string;
     /**
      * Gets the available blend modes
      */
@@ -44274,6 +44875,7 @@ declare module "cesium/Source/Core/Clock" { import { Clock } from 'cesium'; expo
 declare module "cesium/Source/Core/Color" { import { Color } from 'cesium'; export default Color; }
 declare module "cesium/Source/Core/ColorGeometryInstanceAttribute" { import { ColorGeometryInstanceAttribute } from 'cesium'; export default ColorGeometryInstanceAttribute; }
 declare module "cesium/Source/Core/CompressedTextureBuffer" { import { CompressedTextureBuffer } from 'cesium'; export default CompressedTextureBuffer; }
+declare module "cesium/Source/Core/ConstantSpline" { import { ConstantSpline } from 'cesium'; export default ConstantSpline; }
 declare module "cesium/Source/Core/CoplanarPolygonGeometry" { import { CoplanarPolygonGeometry } from 'cesium'; export default CoplanarPolygonGeometry; }
 declare module "cesium/Source/Core/CoplanarPolygonOutlineGeometry" { import { CoplanarPolygonOutlineGeometry } from 'cesium'; export default CoplanarPolygonOutlineGeometry; }
 declare module "cesium/Source/Core/CorridorGeometry" { import { CorridorGeometry } from 'cesium'; export default CorridorGeometry; }
@@ -44300,6 +44902,7 @@ declare module "cesium/Source/Core/EllipsoidTangentPlane" { import { EllipsoidTa
 declare module "cesium/Source/Core/EllipsoidTerrainProvider" { import { EllipsoidTerrainProvider } from 'cesium'; export default EllipsoidTerrainProvider; }
 declare module "cesium/Source/Core/Event" { import { Event } from 'cesium'; export default Event; }
 declare module "cesium/Source/Core/EventHelper" { import { EventHelper } from 'cesium'; export default EventHelper; }
+declare module "cesium/Source/Core/ExperimentalFeatures" { import { ExperimentalFeatures } from 'cesium'; export default ExperimentalFeatures; }
 declare module "cesium/Source/Core/FeatureDetection" { import { FeatureDetection } from 'cesium'; export default FeatureDetection; }
 declare module "cesium/Source/Core/FrustumGeometry" { import { FrustumGeometry } from 'cesium'; export default FrustumGeometry; }
 declare module "cesium/Source/Core/FrustumOutlineGeometry" { import { FrustumOutlineGeometry } from 'cesium'; export default FrustumOutlineGeometry; }
@@ -44343,6 +44946,7 @@ declare module "cesium/Source/Core/Math" { import { Math } from 'cesium'; export
 declare module "cesium/Source/Core/Matrix2" { import { Matrix2 } from 'cesium'; export default Matrix2; }
 declare module "cesium/Source/Core/Matrix3" { import { Matrix3 } from 'cesium'; export default Matrix3; }
 declare module "cesium/Source/Core/Matrix4" { import { Matrix4 } from 'cesium'; export default Matrix4; }
+declare module "cesium/Source/Core/MorphWeightSpline" { import { MorphWeightSpline } from 'cesium'; export default MorphWeightSpline; }
 declare module "cesium/Source/Core/NearFarScalar" { import { NearFarScalar } from 'cesium'; export default NearFarScalar; }
 declare module "cesium/Source/Core/Occluder" { import { Occluder } from 'cesium'; export default Occluder; }
 declare module "cesium/Source/Core/OpenCageGeocoderService" { import { OpenCageGeocoderService } from 'cesium'; export default OpenCageGeocoderService; }
@@ -44388,6 +44992,7 @@ declare module "cesium/Source/Core/SphereGeometry" { import { SphereGeometry } f
 declare module "cesium/Source/Core/SphereOutlineGeometry" { import { SphereOutlineGeometry } from 'cesium'; export default SphereOutlineGeometry; }
 declare module "cesium/Source/Core/Spherical" { import { Spherical } from 'cesium'; export default Spherical; }
 declare module "cesium/Source/Core/Spline" { import { Spline } from 'cesium'; export default Spline; }
+declare module "cesium/Source/Core/SteppedSpline" { import { SteppedSpline } from 'cesium'; export default SteppedSpline; }
 declare module "cesium/Source/Core/TaskProcessor" { import { TaskProcessor } from 'cesium'; export default TaskProcessor; }
 declare module "cesium/Source/Core/TerrainData" { import { TerrainData } from 'cesium'; export default TerrainData; }
 declare module "cesium/Source/Core/TerrainProvider" { import { TerrainProvider } from 'cesium'; export default TerrainProvider; }
@@ -44407,7 +45012,6 @@ declare module "cesium/Source/Core/WallGeometry" { import { WallGeometry } from 
 declare module "cesium/Source/Core/WallOutlineGeometry" { import { WallOutlineGeometry } from 'cesium'; export default WallOutlineGeometry; }
 declare module "cesium/Source/Core/WebMercatorProjection" { import { WebMercatorProjection } from 'cesium'; export default WebMercatorProjection; }
 declare module "cesium/Source/Core/WebMercatorTilingScheme" { import { WebMercatorTilingScheme } from 'cesium'; export default WebMercatorTilingScheme; }
-declare module "cesium/Source/Core/WeightSpline" { import { WeightSpline } from 'cesium'; export default WeightSpline; }
 declare module "cesium/Source/Core/barycentricCoordinates" { import { barycentricCoordinates } from 'cesium'; export default barycentricCoordinates; }
 declare module "cesium/Source/Core/binarySearch" { import { binarySearch } from 'cesium'; export default binarySearch; }
 declare module "cesium/Source/Core/buildModuleUrl" { import { buildModuleUrl } from 'cesium'; export default buildModuleUrl; }
@@ -44638,6 +45242,8 @@ declare module "cesium/Source/Widgets/ToggleButtonViewModel" { import { ToggleBu
 declare module "cesium/Source/Widgets/createCommand" { import { createCommand } from 'cesium'; export default createCommand; }
 declare module "cesium/Source/Scene/ModelExperimental/CustomShader" { import { CustomShader } from 'cesium'; export default CustomShader; }
 declare module "cesium/Source/Scene/ModelExperimental/ModelExperimental" { import { ModelExperimental } from 'cesium'; export default ModelExperimental; }
+declare module "cesium/Source/Scene/ModelExperimental/ModelExperimentalAnimation" { import { ModelExperimentalAnimation } from 'cesium'; export default ModelExperimentalAnimation; }
+declare module "cesium/Source/Scene/ModelExperimental/ModelExperimentalAnimationCollection" { import { ModelExperimentalAnimationCollection } from 'cesium'; export default ModelExperimentalAnimationCollection; }
 declare module "cesium/Source/Scene/ModelExperimental/ModelFeature" { import { ModelFeature } from 'cesium'; export default ModelFeature; }
 declare module "cesium/Source/Scene/ModelExperimental/TextureUniform" { import { TextureUniform } from 'cesium'; export default TextureUniform; }
 declare module "cesium/Source/Widgets/Animation/Animation" { import { Animation } from 'cesium'; export default Animation; }
