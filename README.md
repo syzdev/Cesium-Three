@@ -5,6 +5,10 @@
 - Cesium 1.95：[Release CesiumJS 1.95 · CesiumGS/cesium (github.com)](https://github.com/CesiumGS/cesium/releases/tag/1.95)
 - Three 143：[Release r143 · mrdoob/three.js (github.com)](https://github.com/mrdoob/three.js/releases/tag/r143)
 
+# 在线地址
+
+[ Live Demo ]：[Cesium integrate Threejs (syzdev.cn)](https://syzdev.cn/cesium-docs-demo/cesium-three/cesium-three.html)
+
 # 屏幕截图
 
 <img src="./screenshot/example.png" >
